@@ -18,8 +18,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         exit();
     }
 
-    // Consulta SQL para buscar o usuário pelo email
-    $sql = "SELECT id, full_name, password_hash FROM usuarios WHERE email = ?";
+    // Consulta SQL para buscar o usuário pelo email - INCLUINDO access_level
+    $sql = "SELECT id, full_name, password_hash, access_level FROM usuarios WHERE email = ?";
     $stmt = $conn->prepare($sql);
     
     if ($stmt === false) {
@@ -37,6 +37,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             // A senha está correta, cria a sessão e o cookie
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['user_name'] = $user['full_name'];
+            $_SESSION['access_level'] = $user['access_level']; // ADICIONADA ESTA LINHA
 
             // Se o usuário marcou "Lembrar-me", cria o cookie
             if (isset($_POST['remember-me'])) {

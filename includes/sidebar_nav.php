@@ -1,5 +1,14 @@
 <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-xl flex flex-col justify-between p-6 transition-transform duration-300 transform -translate-x-full lg:translate-x-0 lg:static lg:flex lg:flex-shrink-0">
     
+    <?php
+        // LINHA DE DEBUG: Isso vai criar um comentário no HTML com o nível de acesso do usuário.
+        if (isset($_SESSION['access_level'])) {
+            echo "<!-- Debug: Access Level = " . $_SESSION['access_level'] . " -->";
+        } else {
+            echo "<!-- Debug: Access Level não definido -->";
+        }
+    ?>
+    
     <div class="flex justify-end lg:hidden mb-4">
         <button id="closeSidebarBtn" class="text-gray-500 hover:text-gray-700">
             <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -29,10 +38,24 @@
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-4V4c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2v2H4c-1.1 0-2 .9-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2zM10 4h4v2h-4V4zM4 20v-2h16v2H4zm18-4H2v-6h20v6z"/></svg>
                 Simulados
             </a>
-            <a href="#" class="flex items-center px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 transition-colors duration-200">
+            <a href="meu_perfil.php" class="flex items-center px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 transition-colors duration-200">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
                 Meu Perfil
             </a>
+            
+            <?php
+            // MUDANÇA AQUI: Agora verifica $_SESSION['access_level'] ao invés de $_SESSION['user_access_level']
+            if (isset($_SESSION['access_level']) && ($_SESSION['access_level'] == 2 || $_SESSION['access_level'] == 3)) {
+                // Se for, exibe o botão "Aprovações"
+                echo '
+                <a href="#" class="flex items-center px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 transition-colors duration-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" viewBox="0 0 24 24" fill="currentColor">
+                        <path fill-rule="evenodd" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" clip-rule="evenodd" />
+                    </svg>
+                    Aprovações
+                </a>';
+            }
+            ?>
         </nav>
     </div>
     
