@@ -26,7 +26,7 @@
         </div>
         
         <nav class="space-y-2">
-            <a href="#" class="flex items-center px-4 py-3 rounded-xl text-blue-600 bg-blue-50 font-semibold transition-colors duration-200">
+            <a href="index.php" class="flex items-center px-4 py-3 rounded-xl text-blue-600 bg-blue-50 font-semibold transition-colors duration-200">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8A8 8 0 0 1 12 20z"/><path d="M12 7.75a.75.75 0 0 0-.75.75v3.5a.75.75 0 0 0 1.5 0V8.5a.75.75 0 0 0-.75-.75zM12 15a.75.75 0 0 0-.75.75v.5a.75.75 0 0 0 1.5 0v-.5a.75.75 0 0 0-.75-.75z"/></svg>
                 Painel
             </a>
