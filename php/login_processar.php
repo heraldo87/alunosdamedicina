@@ -1,98 +1,104 @@
 <?php
-// Inclui o arquivo de conexão com o banco de dados
-include 'conn.php';
+// php/login_processar.php — usando usuarios(nivel_acesso, aprovacao) sem alterar o banco
+require_once __DIR__ . '/conn.php';
 
-// Inicia a sessão
-session_start();
-
-// Verifica se os dados do formulário foram enviados
-if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    // Coleta e sanitiza os dados do formulário
-    $email = trim($_POST['email'] ?? '');
-    $password = $_POST['password'] ?? '';
-
-    // Validação básica
-    if ($email === '' || $password === '') {
-        header("Location: ../login.php?error=empty");
-        exit();
-    }
-
-    // Validação de formato do e-mail (opcional, mas recomendado)
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        header("Location: ../login.php?error=invalid_email");
-        exit();
-    }
-
-    // Consulta SQL para buscar o usuário pelo email
-    // Usamos alias para manter "access_level" como no seu código original
-    $sql = "SELECT id, full_name, password_hash, nivel_acesso AS access_level
-            FROM usuarios
-            WHERE email = ?";
-
-    $stmt = $conn->prepare($sql);
-    if ($stmt === false) {
-        // Evita vazar detalhes técnicos para o usuário
-        error_log("Erro na preparação da query de login: " . $conn->error);
-        header("Location: ../login.php?error=server");
-        exit();
-    }
-
-    $stmt->bind_param("s", $email);
-    $stmt->execute();
-    $result = $stmt->get_result();
-
-    // Verifica se encontrou o usuário
-    if ($result && $result->num_rows === 1) {
-        $user = $result->fetch_assoc();
-
-        // Verifica a senha
-        if (password_verify($password, $user['password_hash'])) {
-            // Regenera o ID de sessão para prevenir fixation
-            session_regenerate_id(true);
-
-            // Cria variáveis de sessão
-            $_SESSION['user_id']      = $user['id'];
-            $_SESSION['user_name']    = $user['full_name'];
-            $_SESSION['access_level'] = $user['access_level']; // Mantido como no seu código
-
-            // Lembrar-me (opcional)
-            if (isset($_POST['remember-me'])) {
-                $cookie_name  = "user_auth";
-                $cookie_value = (string)$user['id'];
-                $expires      = time() + (86400 * 30); // 30 dias
-
-                // Define flags seguras quando possível
-                $secure   = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
-                $httponly = true;
-                $path     = "/";
-
-                // PHP 7.3+ suporta array de opções
-                setcookie($cookie_name, $cookie_value, [
-                    'expires'  => $expires,
-                    'path'     => $path,
-                    'secure'   => $secure,
-                    'httponly' => $httponly,
-                    'samesite' => 'Lax'
-                ]);
-            }
-
-            // Redireciona para o painel
-            header("Location: ../index.php");
-            exit();
-        } else {
-            // Senha incorreta
-            header("Location: ../login.php?error=invalid_credentials");
-            exit();
-        }
-    } else {
-        // E-mail não encontrado
-        header("Location: ../login.php?error=invalid_credentials");
-        exit();
-    }
-
-    // Fecha statement
-    $stmt->close();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
 }
 
-// Fecha a conexão
-$conn->close();
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    header('Location: ../login.php');
+    exit();
+}
+
+$email    = trim($_POST['email'] ?? '');
+$password = $_POST['password'] ?? '';
+
+if ($email === '' || $password === '') {
+    header('Location: ../login.php?error=empty');
+    exit();
+}
+
+// Busca exatamente os campos da sua tabela
+$sql = "
+    SELECT
+        id,
+        full_name,
+        phone,
+        ru,
+        turma,
+        turno,
+        email,
+        password_hash,
+        terms_accepted,
+        nivel_acesso,
+        aprovacao,
+        data_insercao
+    FROM usuarios
+    WHERE email = ?
+    LIMIT 1
+";
+
+$stmt = $conn->prepare($sql);
+if (!$stmt) {
+    header('Location: ../login.php?error=server');
+    exit();
+}
+$stmt->bind_param('s', $email);
+$stmt->execute();
+$res = $stmt->get_result();
+
+if ($res->num_rows !== 1) {
+    header('Location: ../login.php?error=invalid_credentials');
+    exit();
+}
+
+$user = $res->fetch_assoc();
+
+// Valida a senha
+if (!password_verify($password, $user['password_hash'] ?? '')) {
+    header('Location: ../login.php?error=invalid_credentials');
+    exit();
+}
+
+// Se NÃO aprovado -> vai para a tela de aguardando
+if ((int)$user['aprovacao'] !== 1) {
+    // guarda info mínima para mensagem amigável
+    $_SESSION['pending_email'] = $user['email'];
+    $_SESSION['pending_name']  = $user['full_name'];
+
+    // limpa qualquer sessão autenticada
+    unset($_SESSION['user_id'], $_SESSION['full_name'], $_SESSION['email'],
+          $_SESSION['access_level'], $_SESSION['nivel_acesso'], $_SESSION['aprovacao']);
+
+    header('Location: ../aguardando_aprovacao.php');
+    exit();
+}
+
+// Aprovado -> autentica e segue
+session_regenerate_id(true);
+
+$_SESSION['user_id']       = (int)$user['id'];
+$_SESSION['full_name']     = $user['full_name'];
+$_SESSION['email']         = $user['email'];
+
+// Compatibilidade: seu sidebar usa $_SESSION['access_level'].
+// Mantemos também $_SESSION['nivel_acesso'] se alguma página antiga usar.
+$_SESSION['nivel_acesso']  = (int)$user['nivel_acesso'];
+$_SESSION['access_level']  = (int)$user['nivel_acesso']; // <- importantíssimo p/ sidebar
+
+$_SESSION['aprovacao']     = (int)$user['aprovacao'];
+
+// (Opcional) Lembrar-me
+if (isset($_POST['remember-me'])) {
+    setcookie('user_auth', (string)$user['id'], [
+        'expires'  => time() + 60*60*24*30,
+        'path'     => '/',
+        'httponly' => true,
+        'samesite' => 'Lax',
+        // 'secure' => true, // habilite se estiver sempre em https
+    ]);
+}
+
+header('Location: ../index.php');
+exit();

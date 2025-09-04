@@ -23,12 +23,12 @@ if ($conn->connect_error) {
 if (isset($_GET['action']) && $_GET['action'] === 'export') {
     $search_query = isset($_GET['search']) ? $_GET['search'] : '';
 
-    $export_sql = "SELECT `id`, `enviar_por_email`, `cpf`, `id_colaborador`, `data_inicial`, `data_final`, 
+    $export_sql = "SELECT `id`, `nome`, `cpf`, `diretoria`, `data_inicial`, `data_final`, 
                           `atividades_realizadas`, `atividades_previstas`, `pontos_relevantes`, `data_registro`
                    FROM `acompanhamento_atividades`";
     $has_search = !empty($search_query);
     if ($has_search) {
-        $export_sql .= " WHERE `enviar_por_email` LIKE ? OR `cpf` LIKE ? OR `id_colaborador` LIKE ? OR `atividades_realizadas` LIKE ?";
+        $export_sql .= " WHERE `nome` LIKE ? OR `cpf` LIKE ? OR `diretoria` LIKE ? OR `atividades_realizadas` LIKE ?";
     }
     $export_sql .= " ORDER BY `id` DESC";
 
@@ -54,7 +54,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'export') {
 
     // Cabeçalhos das colunas
     fputcsv($out, [
-        'ID', 'E-mail', 'CPF', 'ID Colaborador', 'Data Inicial', 'Data Final',
+        'ID', 'Nome', 'CPF', 'Diretoria', 'Data Inicial', 'Data Final',
         'Atividades Realizadas', 'Atividades Previstas', 'Pontos Relevantes', 'Data Registro'
     ]);
 
@@ -68,9 +68,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'export') {
 
             fputcsv($out, [
                 $r['id'],
-                $r['enviar_por_email'],
+                $r['nome'],
                 $r['cpf'],
-                $r['id_colaborador'],
+                $r['diretoria'],
                 $r['data_inicial'],
                 $r['data_final'],
                 $ar,
@@ -108,9 +108,9 @@ if (isset($_POST['action']) && $_POST['action'] === 'delete') {
 // Editar
 if (isset($_POST['action']) && $_POST['action'] === 'update') {
     $id                    = $_POST['id'];
-    $email                 = $_POST['enviar_por_email'];
+    $email                 = $_POST['nome'];
     $cpf                   = $_POST['cpf'];
-    $id_colaborador        = $_POST['id_colaborador'];
+    $id_colaborador        = $_POST['diretoria'];
     $data_inicial          = $_POST['data_inicial'];
     $data_final            = $_POST['data_final'];
     $atividades_realizadas = $_POST['atividades_realizadas'];
@@ -118,9 +118,9 @@ if (isset($_POST['action']) && $_POST['action'] === 'update') {
     $pontos_relevantes     = $_POST['pontos_relevantes'];
 
     $sql = "UPDATE `acompanhamento_atividades` SET 
-            `enviar_por_email` = ?, 
+            `nome` = ?, 
             `cpf` = ?, 
-            `id_colaborador` = ?, 
+            `diretoria` = ?, 
             `data_inicial` = ?, 
             `data_final` = ?, 
             `atividades_realizadas` = ?, 
@@ -131,7 +131,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'update') {
     $stmt = $conn->prepare($sql);
     $stmt->bind_param(
         "ssisssssi",
-        $email, $cpf, $id_colaborador, $data_inicial, $data_final,
+        $nome, $cpf, $diretoria, $data_inicial, $data_final,
         $atividades_realizadas, $atividades_previstas, $pontos_relevantes, $id
     );
     
@@ -154,7 +154,7 @@ $search_query = isset($_GET['search']) ? $_GET['search'] : '';
 // Conta total
 $count_sql = "SELECT COUNT(*) FROM `acompanhamento_atividades`";
 if (!empty($search_query)) {
-    $count_sql .= " WHERE `enviar_por_email` LIKE ? OR `cpf` LIKE ? OR `id_colaborador` LIKE ? OR `atividades_realizadas` LIKE ?";
+    $count_sql .= " WHERE `nome` LIKE ? OR `cpf` LIKE ? OR `diretoria` LIKE ? OR `atividades_realizadas` LIKE ?";
     $stmt_count = $conn->prepare($count_sql);
     $search_term = "%" . $search_query . "%";
     $stmt_count->bind_param("ssss", $search_term, $search_term, $search_term, $search_term);
@@ -167,12 +167,12 @@ $total_records = $result_count ? (int)$result_count->fetch_row()[0] : 0;
 $total_pages   = max(1, (int)ceil($total_records / $records_per_page));
 
 // Query principal
-$sql = "SELECT `id`, `enviar_por_email`, `cpf`, `id_colaborador`, `data_inicial`, `data_final`, 
+$sql = "SELECT `id`, `nome`, `cpf`, `diretoria`, `data_inicial`, `data_final`, 
                `atividades_realizadas`, `atividades_previstas`, `pontos_relevantes`, `data_registro` 
         FROM `acompanhamento_atividades`";
 $has_search = !empty($search_query);
 if ($has_search) {
-    $sql .= " WHERE `enviar_por_email` LIKE ? OR `cpf` LIKE ? OR `id_colaborador` LIKE ? OR `atividades_realizadas` LIKE ?";
+    $sql .= " WHERE `nome` LIKE ? OR `cpf` LIKE ? OR `diretoria` LIKE ? OR `atividades_realizadas` LIKE ?";
 }
 $sql .= " ORDER BY `id` DESC LIMIT ? OFFSET ?";
 

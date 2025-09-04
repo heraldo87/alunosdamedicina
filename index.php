@@ -1,15 +1,23 @@
 <?php
 // 1. Verificação de autenticação (SEMPRE PRIMEIRO)
-include_once 'php/auth_check.php';
+include_once __DIR__ . '/php/auth_check.php';
 
 // 2. Define o título da página
 $pageTitle = "Painel do Aluno - MedinFocus";
 
-// 3. Inclui o cabeçalho HTML
-include_once 'includes/header.php';
+// 2.1 Nome seguro para o "Bem-vindo"
+$nome = $_SESSION['full_name']
+    ?? $_SESSION['user_name']   // fallback p/ telas antigas
+    ?? $_SESSION['email']
+    ?? 'Aluno';
+$nome = is_string($nome) ? trim($nome) : 'Aluno';
+$safeNome = htmlspecialchars($nome, ENT_QUOTES, 'UTF-8');
+
+// 3. Inclui o cabeçalho HTML (abre <html> e <body>)
+include_once __DIR__ . '/includes/header.php';
 
 // 4. Inclui a barra lateral de navegação
-include_once 'includes/sidebar_nav.php';
+include_once __DIR__ . '/includes/sidebar_nav.php';
 ?>
 
 <div class="flex-1 flex flex-col">
@@ -24,8 +32,16 @@ include_once 'includes/sidebar_nav.php';
 
     <main class="flex-1 p-4 md:p-8 overflow-y-auto">
         <div class="p-6 bg-white rounded-xl shadow-lg mb-8">
-            <h1 class="text-3xl font-bold text-gray-800 mb-2">Bem-vindo, <?php echo htmlspecialchars($_SESSION['user_name']); ?>!</h1>
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">
+                Bem-vindo, <?= $safeNome ?>!
+            </h1>
             <p class="text-gray-600">Explore as ferramentas para turbinar seus estudos.</p>
+            <?php
+              // Debug seguro em comentário HTML (opcional)
+              $lvl = $_SESSION['access_level'] ?? ($_SESSION['nivel_acesso'] ?? null);
+              $apv = $_SESSION['aprovacao'] ?? null;
+              echo "<!-- Debug: access_level=" . var_export($lvl, true) . " aprovacao=" . var_export($apv, true) . " -->";
+            ?>
         </div>
         
         <h2 class="text-2xl font-bold text-gray-800 mb-4">Aplicativos MedinFocus</h2>
@@ -81,46 +97,9 @@ include_once 'includes/sidebar_nav.php';
                 <p class="text-sm font-light">Crie e participe de grupos de estudo.</p>
             </a>
         </div>
-
-        <div class="mt-8">
-            <h2 class="text-2xl font-bold text-gray-800 mb-4">Lembretes e Avisos</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="bg-white rounded-xl shadow-md">
-                    <div class="bg-blue-600 text-white p-4 rounded-t-xl flex justify-between items-center">
-                        <h3 class="text-lg font-bold">Lembretes</h3>
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    </div>
-                    <ul class="p-4 space-y-3">
-                        <li class="flex items-start">
-                            <span class="icon-card bg-blue-500 text-white rounded-full flex items-center justify-center p-2 mr-3"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M12 21V9" /></svg></span>
-                            <div>
-                                <p class="text-sm font-medium text-gray-800">Simulado de Anatomia</p>
-                                <p class="text-xs text-gray-500">25/08 às 14:00 - Fique preparado!</p>
-                            </div>
-                        </li>
-                    </ul>
-                </div>
-                
-                <div class="bg-white rounded-xl shadow-md">
-                     <div class="bg-purple-600 text-white p-4 rounded-t-xl flex justify-between items-center">
-                        <h3 class="text-lg font-bold">Notícias e Avisos</h3>
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                    </div>
-                    <ul class="p-4 space-y-3">
-                        <li class="flex items-start">
-                             <span class="icon-card bg-purple-500 text-white rounded-full flex items-center justify-center p-2 mr-3"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></span>
-                            <div>
-                                <p class="text-sm font-medium text-gray-800">Novos Flashcards!</p>
-                                <p class="text-xs text-gray-500">Módulo de Farmacologia disponível.</p>
-                            </div>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
     </main>
+</div> <!-- FECHA o .flex-1 flex flex-col -->
 
 <?php
-// 5. Inclui o rodapé
-include_once 'includes/footer.php';
-?>
+// 5. Inclui o rodapé (fecha </body></html>)
+include_once __DIR__ . '/includes/footer.php';

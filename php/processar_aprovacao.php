@@ -1,47 +1,104 @@
 <?php
-include_once 'auth_check.php'; 
-include_once 'conn.php'; // <-- CORRIGIDO
+// php/login_processar.php — usando usuarios(nivel_acesso, aprovacao) sem alterar o banco
+require_once __DIR__ . '/conn.php';
 
-// Segurança: Apenas representantes (2) e desenvolvedores (3) podem processar
-if ($_SESSION['access_level'] < 2) {
-    header("Location: ../index.php?error=unauthorized");
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    header('Location: ../login.php');
     exit();
 }
 
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['user_id'])) {
-    $user_id = intval($_POST['user_id']);
-    $action = $_POST['action'];
+$email    = trim($_POST['email'] ?? '');
+$password = $_POST['password'] ?? '';
 
-    switch ($action) {
-        case 'aprovar':
-            $sql = "UPDATE usuarios SET status_aluno = 1 WHERE id = ?";
-            $stmt = $conn->prepare($sql);
-            $stmt->bind_param("i", $user_id);
-            break;
-
-        case 'mudar_nivel':
-            if (isset($_POST['novo_nivel'])) {
-                $novo_nivel = intval($_POST['novo_nivel']);
-                // Segurança extra: um representante não pode criar um dev
-                if ($_SESSION['access_level'] == 2 && $novo_nivel > 2) {
-                    $novo_nivel = 1; // Reseta para aluno se houver tentativa de escalada
-                }
-                $sql = "UPDATE usuarios SET access_level = ? WHERE id = ?";
-                $stmt = $conn->prepare($sql);
-                $stmt->bind_param("ii", $novo_nivel, $user_id);
-            }
-            break;
-    }
-
-    if (isset($stmt)) {
-        $stmt->execute();
-        $stmt->close();
-    }
+if ($email === '' || $password === '') {
+    header('Location: ../login.php?error=empty');
+    exit();
 }
 
-$conn->close();
-// Redireciona de volta para a página de aprovações com uma mensagem de sucesso
-header("Location: ../aprovacoes.php?status=success");
-exit();
+// Busca exatamente os campos da sua tabela
+$sql = "
+    SELECT
+        id,
+        full_name,
+        phone,
+        ru,
+        turma,
+        turno,
+        email,
+        password_hash,
+        terms_accepted,
+        nivel_acesso,
+        aprovacao,
+        data_insercao
+    FROM usuarios
+    WHERE email = ?
+    LIMIT 1
+";
 
-?>
+$stmt = $conn->prepare($sql);
+if (!$stmt) {
+    header('Location: ../login.php?error=server');
+    exit();
+}
+$stmt->bind_param('s', $email);
+$stmt->execute();
+$res = $stmt->get_result();
+
+if ($res->num_rows !== 1) {
+    header('Location: ../login.php?error=invalid_credentials');
+    exit();
+}
+
+$user = $res->fetch_assoc();
+
+// Valida a senha
+if (!password_verify($password, $user['password_hash'] ?? '')) {
+    header('Location: ../login.php?error=invalid_credentials');
+    exit();
+}
+
+// Se NÃO aprovado -> vai para a tela de aguardando
+if ((int)$user['aprovacao'] !== 1) {
+    // guarda info mínima para mensagem amigável
+    $_SESSION['pending_email'] = $user['email'];
+    $_SESSION['pending_name']  = $user['full_name'];
+
+    // limpa qualquer sessão autenticada
+    unset($_SESSION['user_id'], $_SESSION['full_name'], $_SESSION['email'],
+          $_SESSION['access_level'], $_SESSION['nivel_acesso'], $_SESSION['aprovacao']);
+
+    header('Location: ../aguardando_aprovacao.php');
+    exit();
+}
+
+// Aprovado -> autentica e segue
+session_regenerate_id(true);
+
+$_SESSION['user_id']       = (int)$user['id'];
+$_SESSION['full_name']     = $user['full_name'];
+$_SESSION['email']         = $user['email'];
+
+// Compatibilidade: seu sidebar usa $_SESSION['access_level'].
+// Mantemos também $_SESSION['nivel_acesso'] se alguma página antiga usar.
+$_SESSION['nivel_acesso']  = (int)$user['nivel_acesso'];
+$_SESSION['access_level']  = (int)$user['nivel_acesso']; // <- importantíssimo p/ sidebar
+
+$_SESSION['aprovacao']     = (int)$user['aprovacao'];
+
+// (Opcional) Lembrar-me
+if (isset($_POST['remember-me'])) {
+    setcookie('user_auth', (string)$user['id'], [
+        'expires'  => time() + 60*60*24*30,
+        'path'     => '/',
+        'httponly' => true,
+        'samesite' => 'Lax',
+        // 'secure' => true, // habilite se estiver sempre em https
+    ]);
+}
+
+header('Location: ../index.php');
+exit();
