@@ -28,13 +28,13 @@
         }
         
         .slide-in {
-            animation: slideIn 0.5s ease-out;
+            animation: slideIn 0.4s ease-out;
         }
         
         @keyframes slideIn {
             from {
                 opacity: 0;
-                transform: translateY(20px);
+                transform: translateY(10px);
             }
             to {
                 opacity: 1;
@@ -54,25 +54,12 @@
         .answer-selected {
             background: linear-gradient(135deg, #3B82F6, #1D4ED8);
             color: white;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
         }
         
         .progress-bar {
             transition: width 0.3s ease;
-        }
-        
-        .pulse {
-            animation: pulse 2s infinite;
-        }
-        
-        @keyframes pulse {
-            0%, 100% {
-                transform: scale(1);
-            }
-            50% {
-                transform: scale(1.05);
-            }
         }
     </style>
 </head>
@@ -141,15 +128,15 @@
         <main class="flex-1 p-4 md:p-8 overflow-y-auto bg-gray-50">
             <!-- Tela de Configuração -->
             <div id="config-screen" class="max-w-2xl mx-auto">
-                <div class="bg-white rounded-2xl shadow-xl p-8 text-center slide-in">
+                <div class="bg-white rounded-xl shadow-lg p-8 text-center slide-in">
                     <div class="mb-8">
-                        <div class="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full mx-auto mb-4 flex items-center justify-center">
+                        <div class="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full mx-auto mb-4 flex items-center justify-center">
                             <svg class="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                             </svg>
                         </div>
                         <h1 class="text-3xl font-bold text-gray-800 mb-2">Configure seu Quiz</h1>
-                        <p class="text-gray-600">Escolha suas preferências para começar o desafio</p>
+                        <p class="text-gray-600">Escolha suas preferências para começar</p>
                     </div>
 
                     <div class="space-y-6">
@@ -174,26 +161,8 @@
                             <p class="text-sm text-gray-500 mt-1">Recomendamos 10-15 questões para um bom treino</p>
                         </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Dificuldade</label>
-                            <div class="grid grid-cols-3 gap-2">
-                                <button type="button" class="difficulty-btn p-3 border-2 border-green-300 text-green-700 rounded-lg hover:bg-green-50 transition-colors" data-difficulty="facil">
-                                    <div class="text-lg font-bold">😊</div>
-                                    <div class="text-sm">Fácil</div>
-                                </button>
-                                <button type="button" class="difficulty-btn p-3 border-2 border-yellow-300 text-yellow-700 rounded-lg hover:bg-yellow-50 transition-colors difficulty-selected" data-difficulty="medio">
-                                    <div class="text-lg font-bold">🤔</div>
-                                    <div class="text-sm">Médio</div>
-                                </button>
-                                <button type="button" class="difficulty-btn p-3 border-2 border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition-colors" data-difficulty="dificil">
-                                    <div class="text-lg font-bold">😤</div>
-                                    <div class="text-sm">Difícil</div>
-                                </button>
-                            </div>
-                        </div>
-
-                        <button id="start-quiz" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold py-4 px-8 rounded-xl hover:from-blue-700 hover:to-purple-700 transform hover:scale-105 transition-all duration-200 pulse">
-                            Começar Quiz 🚀
+                        <button id="start-quiz" class="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white font-bold py-4 px-8 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200">
+                            Começar Quiz
                         </button>
                     </div>
                 </div>
@@ -202,22 +171,22 @@
             <!-- Tela do Quiz -->
             <div id="quiz-screen" class="max-w-4xl mx-auto hidden">
                 <!-- Progress Bar -->
-                <div class="bg-white rounded-xl shadow-md p-6 mb-6 slide-in">
+                <div class="bg-white rounded-lg shadow-md p-6 mb-6 slide-in">
                     <div class="flex justify-between items-center mb-2">
                         <span class="text-sm font-medium text-gray-600">Progresso</span>
                         <span id="progress-text" class="text-sm font-medium text-gray-600">1 de 10</span>
                     </div>
                     <div class="w-full bg-gray-200 rounded-full h-3">
-                        <div id="progress-bar" class="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full progress-bar" style="width: 10%"></div>
+                        <div id="progress-bar" class="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full progress-bar" style="width: 10%"></div>
                     </div>
                 </div>
 
                 <!-- Question Card -->
-                <div id="question-card" class="bg-white rounded-2xl shadow-xl p-8 slide-in">
+                <div id="question-card" class="bg-white rounded-xl shadow-lg p-8 slide-in">
                     <div class="mb-6">
                         <div class="flex items-center justify-between mb-4">
                             <span id="question-number" class="text-sm font-medium text-blue-600 bg-blue-100 px-3 py-1 rounded-full">Questão 1</span>
-                            <span id="timer" class="text-sm font-medium text-gray-500">⏱️ 00:30</span>
+                            <span id="timer" class="text-sm font-medium text-gray-500">Tempo restante: 00:30</span>
                         </div>
                         <h2 id="question-text" class="text-xl font-bold text-gray-800 leading-relaxed">
                             Carregando questão...
@@ -237,7 +206,7 @@
                                 Pular
                             </button>
                             <button id="next-question" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors" disabled>
-                                Próxima →
+                                Próxima
                             </button>
                         </div>
                     </div>
@@ -246,10 +215,12 @@
 
             <!-- Tela de Resultados -->
             <div id="results-screen" class="max-w-3xl mx-auto hidden">
-                <div class="bg-white rounded-2xl shadow-xl p-8 text-center slide-in">
+                <div class="bg-white rounded-xl shadow-lg p-8 text-center slide-in">
                     <div class="mb-8">
-                        <div id="result-icon" class="w-24 h-24 mx-auto mb-4 rounded-full flex items-center justify-center bg-green-100">
-                            <span class="text-4xl">🎉</span>
+                        <div id="result-icon" class="w-24 h-24 mx-auto mb-4 rounded-full flex items-center justify-center bg-blue-100">
+                            <svg class="w-12 h-12 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
                         </div>
                         <h1 id="result-title" class="text-3xl font-bold text-gray-800 mb-2">Parabéns!</h1>
                         <p id="result-subtitle" class="text-gray-600">Você completou o quiz</p>
@@ -268,15 +239,6 @@
                             <div class="text-3xl font-bold text-blue-600" id="final-score">0%</div>
                             <div class="text-sm text-blue-700">Pontuação</div>
                         </div>
-                    </div>
-
-                    <div class="space-y-4">
-                        <button id="review-answers" class="w-full bg-gray-100 text-gray-700 font-medium py-3 px-6 rounded-xl hover:bg-gray-200 transition-colors">
-                            📊 Revisar Respostas
-                        </button>
-                        <button id="restart-quiz" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold py-3 px-6 rounded-xl hover:from-blue-700 hover:to-purple-700 transition-colors">
-                            🔄 Fazer Novo Quiz
-                        </button>
                     </div>
                 </div>
             </div>
@@ -461,15 +423,6 @@
                 elements.startBtn.addEventListener('click', startQuiz);
             }
 
-            // Difficulty buttons
-            document.querySelectorAll('.difficulty-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    document.querySelectorAll('.difficulty-btn').forEach(b => 
-                        b.classList.remove('difficulty-selected'));
-                    this.classList.add('difficulty-selected');
-                });
-            });
-
             // Quiz navigation
             if (elements.prevBtn) elements.prevBtn.addEventListener('click', prevQuestion);
             if (elements.nextBtn) elements.nextBtn.addEventListener('click', nextQuestion);
@@ -566,7 +519,7 @@
                 elements.answersContainer.innerHTML = '';
                 question.a.forEach((answer, index) => {
                     const div = document.createElement('div');
-                    div.className = 'answer-option p-4 border-2 border-gray-200 rounded-xl cursor-pointer';
+                    div.className = 'answer-option p-4 border-2 border-gray-200 rounded-lg cursor-pointer';
                     div.innerHTML = `
                         <div class="flex items-center space-x-3">
                             <div class="w-6 h-6 border-2 border-gray-300 rounded-full flex items-center justify-center">
@@ -626,7 +579,7 @@
                 const minutes = Math.floor(quiz.timeLeft / 60);
                 const seconds = quiz.timeLeft % 60;
                 if (elements.timer) {
-                    elements.timer.textContent = `⏱️ ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                    elements.timer.textContent = `Tempo restante: ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
                 }
 
                 if (quiz.timeLeft <= 0) {
@@ -683,26 +636,14 @@
 
             // Update result message
             if (percentage >= 80) {
-                if (elements.resultIcon) {
-                    elements.resultIcon.className = 'w-24 h-24 mx-auto mb-4 rounded-full flex items-center justify-center bg-green-100';
-                    elements.resultIcon.innerHTML = '<span class="text-4xl">🎉</span>';
-                }
                 if (elements.resultTitle) elements.resultTitle.textContent = 'Excelente!';
-                if (elements.resultSubtitle) elements.resultSubtitle.textContent = 'Você domina bem este conteúdo!';
+                if (elements.resultSubtitle) elements.resultSubtitle.textContent = 'Você domina bem este conteúdo.';
             } else if (percentage >= 60) {
-                if (elements.resultIcon) {
-                    elements.resultIcon.className = 'w-24 h-24 mx-auto mb-4 rounded-full flex items-center justify-center bg-yellow-100';
-                    elements.resultIcon.innerHTML = '<span class="text-4xl">👍</span>';
-                }
                 if (elements.resultTitle) elements.resultTitle.textContent = 'Bom trabalho!';
-                if (elements.resultSubtitle) elements.resultSubtitle.textContent = 'Continue estudando para melhorar!';
+                if (elements.resultSubtitle) elements.resultSubtitle.textContent = 'Continue estudando para melhorar.';
             } else {
-                if (elements.resultIcon) {
-                    elements.resultIcon.className = 'w-24 h-24 mx-auto mb-4 rounded-full flex items-center justify-center bg-red-100';
-                    elements.resultIcon.innerHTML = '<span class="text-4xl">📚</span>';
-                }
                 if (elements.resultTitle) elements.resultTitle.textContent = 'Continue estudando!';
-                if (elements.resultSubtitle) elements.resultSubtitle.textContent = 'A prática leva à perfeição!';
+                if (elements.resultSubtitle) elements.resultSubtitle.textContent = 'A prática leva à perfeição.';
             }
 
             showScreen('results');

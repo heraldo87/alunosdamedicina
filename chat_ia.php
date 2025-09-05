@@ -1,572 +1,391 @@
 <?php
-// Inicia a sessão explicitamente no início do arquivo
-session_start();
+// 1) Autenticação obrigatória
+require_once __DIR__ . '/php/auth_check.php';
 
-// Define o título da página
-$pageTitle = "Tire suas dúvidas com IA - MedinFocus";
+// 2) Metadados da página (usados pelos partials/header & sidebar)
+$pageTitle  = 'Quizzes - MedinFocus';
+$activeMenu = 'quizzes';
+$userId     = (int)($_SESSION['user_id'] ?? 0);
 
-// Verificação de autenticação simplificada
-if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
-    // Redireciona para o login se não estiver autenticado
-    header("Location: login.php?error=auth_required");
-    exit();
+// Nome seguro do usuário para saudação
+$nomeBase = $_SESSION['full_name']
+    ?? $_SESSION['user_name']
+    ?? $_SESSION['email']
+    ?? 'Aluno';
+$safeNome = htmlspecialchars(is_string($nomeBase) ? trim($nomeBase) : 'Aluno', ENT_QUOTES, 'UTF-8');
+
+// 3) Partials padrão (mesmo padrão do index)
+// header.php deve abrir <!DOCTYPE html>, <html>, <head> (com Tailwind/Inter) e <body>
+require_once __DIR__ . '/includes/header.php';
+
+// Topbar (se existir)
+if (file_exists(__DIR__ . '/includes/topbar.php')) {
+    require_once __DIR__ . '/includes/topbar.php';
 }
 
-// Obtém informações do usuário a partir da sessão com valores padrão de fallback
-$userId      = $_SESSION['user_id']      ?? 0;
-$userName    = $_SESSION['user_name']    ?? 'Usuário';
-$accessLevel = $_SESSION['access_level'] ?? 1;
-$userTurma   = $_SESSION['turma']        ?? '1º Ano';
-
-// Diretório para salvar históricos de chat e anotações
-$chatDir   = 'chats/';
-$notesFile = $chatDir . 'user_' . $userId . '_notes.json';
-
-// Cria o diretório de chats se não existir
-if (!file_exists($chatDir)) {Q
-    if (!mkdir($chatDir, 0755, true)) {
-        die("Erro: Não foi possível criar o diretório de chats. Verifique as permissões.");
-    }
-}
-
-// Cria o arquivo de anotações se não existir
-if (!file_exists($notesFile)) {
-    $defaultNotes = [ 'notes' => [] ];
-    if (!file_put_contents($notesFile, json_encode($defaultNotes, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE))) {
-        // Não interrompe o uso do sistema, apenas avisa
-        $notesError = "Não foi possível criar o arquivo de anotações. Algumas funcionalidades podem estar indisponíveis.";
-    }
-}
-
-// Carrega as anotações salvas
-$notes = [];
-if (file_exists($notesFile)) {
-    $notesContent = file_get_contents($notesFile);
-    if ($notesContent !== false) {
-        $notesData = json_decode($notesContent, true);
-        if (is_array($notesData) && isset($notesData['notes'])) {
-            $notes = $notesData['notes'];
-        }
-    }
-}
-
-// Processamento de formulários
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Processamento para salvar uma nova anotação
-    if (isset($_POST['action']) && $_POST['action'] === 'save_note') {
-        $noteText  = trim($_POST['note_text']  ?? '');
-        $noteTitle = trim($_POST['note_title'] ?? '');
-        
-        if (!empty($noteText)) {
-            // Adiciona a nova anotação
-            $notes[] = [
-                'id'    => time() . '_' . mt_rand(1000, 9999),
-                'title' => !empty($noteTitle) ? $noteTitle : 'Anotação ' . (count($notes) + 1),
-                'text'  => $noteText,
-                'date'  => date('Y-m-d H:i:s')
-            ];
-            
-            // Salva o arquivo atualizado
-            $notesData = ['notes' => $notes];
-            if (file_put_contents($notesFile, json_encode($notesData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE))) {
-                $noteMessage = ['type' => 'success', 'text' => 'Anotação salva com sucesso!'];
-            } else {
-                $noteMessage = ['type' => 'error', 'text' => 'Erro ao salvar a anotação.'];
-            }
-        } else {
-            $noteMessage = ['type' => 'error', 'text' => 'O texto da anotação não pode estar vazio.'];
-        }
-    }
-    
-    // Processamento para excluir uma anotação
-    if (isset($_POST['action']) && $_POST['action'] === 'delete_note') {
-        $noteId = $_POST['note_id'] ?? '';
-        
-        // Encontra e remove a anotação
-        foreach ($notes as $key => $note) {
-            if (isset($note['id']) && $note['id'] === $noteId) {
-                unset($notes[$key]);
-                break;
-            }
-        }
-        
-        // Reindexação do array
-        $notes = array_values($notes);
-        
-        // Salva o arquivo atualizado
-        $notesData = ['notes' => $notes];
-        if (file_put_contents($notesFile, json_encode($notesData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE))) {
-            $noteMessage = ['type' => 'success', 'text' => 'Anotação excluída com sucesso!'];
-        } else {
-            $noteMessage = ['type' => 'error', 'text' => 'Erro ao excluir a anotação.'];
-        }
-    }
-}
-
-// Inclui o cabeçalho HTML
-include_once 'includes/header.php';
-
-// Inclui a barra lateral de navegação
-include_once 'includes/sidebar_nav.php';
+// Sidebar de navegação (o arquivo deve renderizar um elemento com id="sidebar" OU data-sidebar)
+require_once __DIR__ . '/includes/sidebar_nav.php';
 ?>
 
-<div class="flex-1 flex flex-col">
-    <!-- Barra superior com título e botão de menu -->
-    <header class="bg-white shadow-md p-4 flex items-center justify-between">
-        <button id="openSidebarBtn" class="text-gray-500 hover:text-gray-700 lg:hidden">
-            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-            </svg>
-        </button>
-        <span class="text-xl font-bold text-gray-800">Tire suas dúvidas com IA</span>
-    </header>
+<style>
+  /* Estilos locais e leves (ideal mover para o CSS global do tema) */
+  .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+  .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+  .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  .quiz-card { transition: transform .2s ease, box-shadow .2s ease; }
+  .quiz-card:hover { transform: translateY(-4px); box-shadow: 0 10px 15px rgba(0,0,0,.08); }
+  .modal-enter { animation: fadeIn .25s ease; }
+  @keyframes fadeIn { from {opacity:0; transform: translateY(-6px);} to {opacity:1; transform: translateY(0);} }
+</style>
 
-    <!-- Conteúdo principal -->
-    <main class="flex-1 p-0 flex flex-col md:flex-row">
-        <!-- Área do Chat - Ocupa toda a largura em mobile e 2/3 em desktop -->
-        <div class="flex-1 flex flex-col h-full bg-gray-50 md:border-r border-gray-200">
-            <!-- Histórico de mensagens do chat -->
-            <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4">
-                <!-- Mensagem de boas-vindas do sistema -->
-                <div class="flex items-start">
-                    <div class="flex-shrink-0 mr-3">
-                        <div class="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">
-                            AI
-                        </div>
-                    </div>
-                    <div class="bg-white rounded-lg p-4 shadow-md max-w-3xl">
-                        <p class="text-gray-800">
-                            Olá, <?php echo htmlspecialchars($userName); ?>! Sou o assistente de estudos do MedinFocus.
-                            Como posso ajudar você hoje? Pode me fazer perguntas sobre medicina, anatomia, fisiologia,
-                            ou qualquer assunto relacionado aos seus estudos.
-                        </p>
-                    </div>
-                </div>
-
-                <!-- As mensagens do chat serão adicionadas dinamicamente via JavaScript -->
-            </div>
-
-            <!-- Entrada de texto e envio de mensagem -->
-            <div class="border-t border-gray-200 p-4 bg-white">
-                <form id="chat-form" class="flex space-x-2">
-                    <div class="flex-1 relative">
-                        <textarea id="user-message" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none"
-                                  placeholder="Digite sua pergunta aqui..." rows="2"></textarea>
-                        <button type="button" id="clear-chat" class="absolute top-2 right-2 text-gray-400 hover:text-gray-600" title="Limpar conversa">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                            </svg>
-                        </button>
-                    </div>
-                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors flex items-center" title="Enviar">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/>
-                        </svg>
-                    </button>
-                </form>
-            </div>
-        </div>
-
-        <!-- Painel lateral de anotações - Oculto em mobile, 1/3 em desktop -->
-        <div id="notes-panel" class="hidden md:flex md:w-80 lg:w-96 flex-col bg-white border-l border-gray-200">
-            <div class="p-4 border-b border-gray-200 flex justify-between items-center">
-                <h2 class="text-lg font-semibold text-gray-800">Suas Anotações</h2>
-                <button id="new-note-btn" class="text-blue-600 hover:text-blue-800" title="Nova anotação">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-                    </svg>
-                </button>
-            </div>
-
-            <?php if (isset($noteMessage)): ?>
-                <div class="p-3 m-3 rounded-lg <?php echo $noteMessage['type'] === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'; ?>">
-                    <?php echo $noteMessage['text']; ?>
-                </div>
-            <?php endif; ?>
-
-            <!-- Lista de anotações -->
-            <div class="flex-1 overflow-y-auto p-3 space-y-3">
-                <?php if (count($notes) > 0): ?>
-                    <?php foreach ($notes as $note): ?>
-                        <div class="bg-gray-50 rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow">
-                            <div class="flex justify-between items-start mb-1">
-                                <h3 class="font-medium text-gray-900"><?php echo htmlspecialchars($note['title']); ?></h3>
-                                <form method="post" class="inline">
-                                    <input type="hidden" name="action" value="delete_note">
-                                    <input type="hidden" name="note_id" value="<?php echo htmlspecialchars($note['id']); ?>">
-                                    <button type="submit" class="text-red-600 hover:text-red-800" title="Excluir">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                        </svg>
-                                    </button>
-                                </form>
-                            </div>
-                            <p class="text-sm text-gray-700 whitespace-pre-line"><?php echo nl2br(htmlspecialchars($note['text'])); ?></p>
-                            <p class="text-xs text-gray-500 mt-2"><?php echo date("d/m/Y H:i", strtotime($note['date'])); ?></p>
-                        </div>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <div class="text-center py-8 text-gray-500">
-                        <p>Nenhuma anotação encontrada.</p>
-                        <p class="text-sm mt-2">Clique no botão + para criar uma nova.</p>
-                    </div>
-                <?php endif; ?>
-            </div>
-        </div>
-    </main>
-
-    <!-- Botão flutuante para mostrar/ocultar anotações em telas pequenas -->
-    <button id="toggle-notes" class="md:hidden fixed bottom-6 right-6 bg-blue-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg" title="Anotações">
-        <svg id="notes-icon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-        </svg>
-        <svg id="close-notes-icon" class="h-6 w-6 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-        </svg>
+<div class="flex-1 flex flex-col min-h-0">
+  <!-- Header interno da página (mantém layout do tema) -->
+  <header class="bg-white shadow-sm p-4 flex items-center justify-between">
+    <button id="openSidebarBtn" class="text-gray-500 hover:text-gray-700 lg:hidden" aria-label="Abrir menu lateral">
+      <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+      </svg>
     </button>
+    <span class="text-xl font-bold text-gray-800">Quizzes</span>
+    <span class="text-gray-600">Olá, <?= $safeNome ?>!</span>
+  </header>
+
+  <!-- Conteúdo principal -->
+  <main class="flex-1 p-4 bg-gray-50 overflow-y-auto custom-scrollbar">
+    <div class="max-w-4xl mx-auto py-6">
+      <!-- Painel de seleção do quiz -->
+      <section id="quiz-selection-panel" class="bg-white rounded-lg shadow-sm p-6 mb-8">
+        <h2 class="text-2xl font-semibold text-gray-800 mb-2">Escolha um Quiz para Começar</h2>
+        <p class="text-gray-600 mb-4">Selecione as opções abaixo para iniciar um novo desafio.</p>
+
+        <div class="flex flex-col md:flex-row md:items-center gap-4">
+          <div class="flex-1">
+            <label for="discipline-select" class="sr-only">Selecione a Disciplina</label>
+            <select id="discipline-select" class="w-full border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500">
+              <option value="" disabled selected>-- Selecione a Disciplina --</option>
+            </select>
+          </div>
+          <div class="flex-1">
+            <label for="partial-select" class="sr-only">Selecione a Parcial</label>
+            <select id="partial-select" class="w-full border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500" disabled>
+              <option value="" disabled selected>-- Selecione a Parcial --</option>
+            </select>
+          </div>
+          <div class="flex-1">
+            <label for="quiz-select" class="sr-only">Selecione o Quiz</label>
+            <select id="quiz-select" class="w-full border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500" disabled>
+              <option value="" disabled selected>-- Selecione o Quiz --</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="flex flex-col md:flex-row md:items-center gap-4 mt-6">
+          <button id="start-quiz-btn" class="w-full md:w-auto px-6 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50" disabled>
+            Começar Quiz
+          </button>
+          <a href="#" id="create-quiz-btn" class="w-full md:w-auto px-6 py-2 border border-gray-300 text-gray-700 text-center font-medium rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300">
+            Criar meu quiz
+          </a>
+        </div>
+      </section>
+
+      <!-- Container do quiz renderizado -->
+      <div id="quiz-container" class="mt-8 hidden"></div>
+
+      <!-- Toast/Notificação -->
+      <div id="notification-modal" class="fixed inset-x-0 bottom-4 mx-auto p-4 bg-red-500 text-white rounded-lg shadow-lg w-fit transition-all duration-300 transform opacity-0 hidden z-50"></div>
+    </div>
+  </main>
 </div>
 
-<!-- Modal para Criar Nova Anotação -->
-<div id="noteModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">Nova Anotação</h3>
-        
-        <form action="" method="post">
-            <input type="hidden" name="action" value="save_note">
-            
-            <div class="mb-4">
-                <label for="note_title" class="block text-sm font-medium text-gray-700 mb-1">Título da Anotação</label>
-                <input type="text" id="note_title" name="note_title"
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                       placeholder="Ex: Resumo de Cardiologia">
-            </div>
-            
-            <div class="mb-4">
-                <label for="note_text" class="block text-sm font-medium text-gray-700 mb-1">Conteúdo</label>
-                <textarea id="note_text" name="note_text" required rows="5"
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                       placeholder="Digite aqui suas anotações..."></textarea>
-            </div>
-            
-            <div class="flex justify-end space-x-3">
-                <button type="button" id="cancelNoteBtn"
-                        class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                    Cancelar
-                </button>
-                <button type="submit"
-                        class="px-4 py-2 bg-blue-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                    Salvar
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
+<?php
+// Debug opcional (aparece apenas no HTML, útil em dev)
+$lvl = $_SESSION['access_level'] ?? ($_SESSION['nivel_acesso'] ?? null);
+$apv = $_SESSION['aprovacao'] ?? null;
+echo "<!-- Debug: user_id=" . var_export($userId, true) . " access_level=" . var_export($lvl, true) . " aprovacao=" . var_export($apv, true) . " -->";
+?>
 
 <script>
-    // ===== Config =====
-    const N8N_ENDPOINT = 'http://localhost:5678/webhook-test/chat_ia'; // PRODUÇÃO (HTTPS)
-    const SESSION_ID   = <?php echo json_encode('user-' . $userId); ?>;     // mantém conversa por usuário
+(() => {
+  // Expor userId se necessário para telemetria ou POSTs futuros
+  window.MEDINFOCUS = Object.assign({}, window.MEDINFOCUS || {}, {
+    userId: <?= json_encode($userId) ?>,
+  });
 
-    // Elementos DOM
-    const chatForm           = document.getElementById('chat-form');
-    const userMessageInput   = document.getElementById('user-message');
-    const chatMessages       = document.getElementById('chat-messages');
-    const clearChatButton    = document.getElementById('clear-chat');
-    const toggleNotesButton  = document.getElementById('toggle-notes');
-    const notesPanel         = document.getElementById('notes-panel');
-    const newNoteBtn         = document.getElementById('new-note-btn');
-    const noteModal          = document.getElementById('noteModal');
-    const cancelNoteBtn      = document.getElementById('cancelNoteBtn');
-    const notesIcon          = document.getElementById('notes-icon');
-    const closeNotesIcon     = document.getElementById('close-notes-icon');
+  // ------- Elements
+  const disciplineSelect   = document.getElementById('discipline-select');
+  const partialSelect      = document.getElementById('partial-select');
+  const quizSelect         = document.getElementById('quiz-select');
+  const startQuizBtn       = document.getElementById('start-quiz-btn');
+  const createQuizBtn      = document.getElementById('create-quiz-btn');
+  const quizContainer      = document.getElementById('quiz-container');
+  const quizSelectionPanel = document.getElementById('quiz-selection-panel');
+  const notificationModal  = document.getElementById('notification-modal');
+  const openSidebarBtn     = document.getElementById('openSidebarBtn');
+  const sidebar            = document.getElementById('sidebar') || document.querySelector('[data-sidebar]');
 
-    // Array para armazenar mensagens da sessão atual (apenas no front)
-    let chatHistory = [];
+  // ------- Dados mockados (trocar por fetch() ao integrar backend)
+  const mockQuizData = {
+    disciplines: [
+      { id: 'anatomia',     name: 'Anatomia Humana' },
+      { id: 'fisiologia',   name: 'Fisiologia' },
+      { id: 'farmacologia', name: 'Farmacologia' },
+      { id: 'patologia',    name: 'Patologia' },
+    ],
+    partials: [
+      { id: 'p1', name: 'Primeiro Parcial' },
+      { id: 'p2', name: 'Segundo Parcial' },
+    ],
+    quizzes: [
+      { id: '1', title: 'Anatomia Básica',              disciplineId: 'anatomia',   partialId: 'p1' },
+      { id: '2', title: 'Fisiologia Cardiovascular',    disciplineId: 'fisiologia', partialId: 'p2' },
+      { id: '3', title: 'Farmacologia - Antibióticos',  disciplineId: 'farmacologia', partialId: 'p2' },
+      { id: '4', title: 'Patologia - Inflamação',       disciplineId: 'patologia',  partialId: 'p1' },
+    ],
+  };
 
-    // Função para enviar mensagem do usuário
-    chatForm.addEventListener('submit', function(event) {
-        event.preventDefault();
-        const userMessage = userMessageInput.value.trim();
-        if (userMessage === '') return;
+  const quizQuestionsData = {
+    '1': {
+      title: 'Anatomia Humana - Básica',
+      questions: [
+        { text: 'Qual é o maior osso do corpo humano?', answers: ['Fíbula', 'Fêmur', 'Úmero', 'Tíbia'], correct: 'Fêmur' },
+        { text: 'Qual órgão é responsável por bombear o sangue para todo o corpo?', answers: ['Pulmão', 'Fígado', 'Coração', 'Cérebro'], correct: 'Coração' },
+        { text: 'Quantos ossos tem o corpo humano adulto?', answers: ['206', '212', '270', '250'], correct: '206' },
+      ],
+    },
+    '2': {
+      title: 'Fisiologia do Sistema Cardiovascular',
+      questions: [
+        { text: 'Qual a principal função das artérias?', answers: ['Levar sangue para o coração', 'Levar sangue do coração para o corpo', 'Trocar gases no pulmão', 'Coagular o sangue'], correct: 'Levar sangue do coração para o corpo' },
+        { text: 'O que a sístole representa?', answers: ['Relaxamento do coração', 'Contração do coração', 'Fluxo de sangue nos capilares', 'Batimento cardíaco em repouso'], correct: 'Contração do coração' },
+      ],
+    },
+    '3': {
+      title: 'Farmacologia - Antibióticos',
+      questions: [
+        { text: 'Qual classe de antibióticos age inibindo a síntese da parede celular bacteriana?', answers: ['Macrolídeos', 'Aminoglicosídeos', 'Beta-lactâmicos', 'Tetraciclinas'], correct: 'Beta-lactâmicos' },
+      ],
+    },
+    '4': {
+      title: 'Patologia - Inflamação',
+      questions: [
+        { text: 'Qual é o principal mediador químico da inflamação aguda, responsável pela vasodilatação e aumento da permeabilidade vascular?', answers: ['Interleucina-1', 'Histamina', 'Fator de necrose tumoral', 'Prostaglandinas'], correct: 'Histamina' },
+      ],
+    },
+  };
 
-        addMessageToChat('user', userMessage);
-        userMessageInput.value = '';
-        showTypingIndicator();
-        fetchAIResponse(userMessage);
+  // ------- Helpers UI
+  function showNotification(message, isError = true) {
+    if (!notificationModal) return;
+    notificationModal.textContent = message;
+    notificationModal.classList.toggle('bg-red-500', !!isError);
+    notificationModal.classList.toggle('bg-green-500', !isError);
+    notificationModal.classList.remove('hidden', 'opacity-0');
+    notificationModal.classList.add('opacity-100', 'modal-enter');
+    setTimeout(() => {
+      notificationModal.classList.remove('opacity-100');
+      notificationModal.classList.add('opacity-0');
+      setTimeout(() => notificationModal.classList.add('hidden'), 250);
+    }, 2500);
+  }
+
+  function escapeHTML(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  function populateDropdown(selectEl, data, placeholder) {
+    selectEl.innerHTML = `<option value="" disabled selected>${placeholder}</option>`;
+    (data || []).forEach(item => {
+      const opt = document.createElement('option');
+      opt.value = item.id;
+      opt.textContent = item.name || item.title;
+      selectEl.appendChild(opt);
     });
+    selectEl.disabled = false;
+  }
 
-    // Adiciona mensagem ao chat
-    function addMessageToChat(sender, message) {
-        const messageDiv = document.createElement('div');
-        messageDiv.className = 'flex items-start';
+  function filterAndPopulateQuizzes() {
+    const d = disciplineSelect.value;
+    const p = partialSelect.value;
+    const placeholder = '-- Selecione o Quiz --';
+    if (d && p) {
+      const filtered = mockQuizData.quizzes.filter(q => q.disciplineId === d && q.partialId === p);
+      populateDropdown(quizSelect, filtered, placeholder);
+      startQuizBtn.disabled = true; // só habilita quando um quiz for escolhido
+    } else {
+      quizSelect.innerHTML = `<option value="" disabled selected>${placeholder}</option>`;
+      quizSelect.disabled = true;
+      startQuizBtn.disabled = true;
+    }
+  }
 
-        if (sender === 'user') {
-            messageDiv.innerHTML = `
-                <div class="flex-1"></div>
-                <div class="bg-blue-100 rounded-lg p-4 shadow-md max-w-3xl">
-                    <p class="text-gray-800">${escapeHTML(message)}</p>
-                </div>
-                <div class="flex-shrink-0 ml-3">
-                    <div class="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-gray-700 font-bold">
-                        ${getInitials(<?php echo json_encode($userName); ?>)}
-                    </div>
-                </div>
-            `;
-        } else {
-            messageDiv.innerHTML = `
-                <div class="flex-shrink-0 mr-3">
-                    <div class="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">
-                        AI
-                    </div>
-                </div>
-                <div class="bg-white rounded-lg p-4 shadow-md max-w-3xl relative group">
-                    <p class="text-gray-800">${formatAIResponse(message)}</p>
-                    <button class="save-to-note absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-blue-600 hover:text-blue-800 transition-opacity" title="Adicionar às anotações">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                        </svg>
-                    </button>
-                </div>
-            `;
-            setTimeout(() => {
-                const saveButton = messageDiv.querySelector('.save-to-note');
-                if (saveButton) {
-                    saveButton.addEventListener('click', function() {
-                        openNoteModalWithText(message);
-                    });
-                }
-            }, 10);
-        }
+  // ------- Renderização do Quiz
+  function startQuiz(quizId) {
+    quizSelectionPanel.classList.add('hidden');
+    renderQuiz(quizId);
+  }
 
-        chatMessages.appendChild(messageDiv);
-
-        chatHistory.push({
-            sender: sender,
-            message: message,
-            timestamp: new Date().toISOString()
-        });
-
-        chatMessages.scrollTop = chatMessages.scrollHeight;
+  function renderQuiz(quizId) {
+    const quizData = quizQuestionsData[quizId];
+    if (!quizData) {
+      quizContainer.innerHTML = `<div class="p-4 bg-red-100 text-red-800 rounded-md">Quiz não encontrado!</div>`;
+      quizContainer.classList.remove('hidden');
+      return;
     }
 
-    // Indicador de digitação
-    function showTypingIndicator() {
-        const typingIndicator = document.createElement('div');
-        typingIndicator.className = 'flex items-start typing-indicator';
-        typingIndicator.id = 'typing-indicator';
-        typingIndicator.innerHTML = `
-            <div class="flex-shrink-0 mr-3">
-                <div class="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">AI</div>
-            </div>
-            <div class="bg-white rounded-lg p-4 shadow-md max-w-3xl">
-                <p class="text-gray-800">Escrevendo<span class="animate-typing">...</span></p>
-            </div>
-        `;
-        chatMessages.appendChild(typingIndicator);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
-
-    function removeTypingIndicator() {
-        const typingIndicator = document.getElementById('typing-indicator');
-        if (typingIndicator) typingIndicator.remove();
-    }
-
-    // ====== FETCH para o n8n (com timeout e parser robusto) ======
-    async function fetchAIResponse(userMessage) {
-        const payload = {
-            sessionId: SESSION_ID,                 // mantém conversa por usuário (no n8n)
-            user: <?php echo json_encode($userName); ?>,
-            message: userMessage
-        };
-
-        const controller = new AbortController();
-        const timeoutId  = setTimeout(() => controller.abort(), 25000); // 25s
-
-        try {
-            const resp = await fetch(N8N_ENDPOINT, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-                mode: 'cors',
-                signal: controller.signal
-            });
-
-            if (!resp.ok) {
-                throw new Error('HTTP ' + resp.status);
-            }
-
-            // Tenta JSON; se falhar, lê texto puro
-            let data, text;
-            try {
-                data = await resp.json();
-            } catch (_) {
-                text = await resp.text();
-            }
-
-            removeTypingIndicator();
-
-            const aiResponse = parseAIResponse(data, text);
-            addMessageToChat('ai', aiResponse);
-        } catch (err) {
-            console.error('Erro no fetch:', err);
-            removeTypingIndicator();
-            addMessageToChat('ai',
-                'Desculpe, ocorreu um erro ao processar sua pergunta. ' +
-                'Por favor, verifique sua conexão e tente novamente.'
-            );
-        } finally {
-            clearTimeout(timeoutId);
-        }
-    }
-
-    // Parser robusto para diferentes formatos do webhook
-    function parseAIResponse(data, fallbackText='') {
-        // 1) Se o n8n já retorna string simples
-        if (typeof data === 'string') return data.trim();
-        if (!data) return (fallbackText || 'Sem resposta.').toString();
-
-        // 2) Estrutura que você mostrou no curl de produção:
-        // {"index":0,"message":{"role":"assistant","content":"..."}}
-        if (data?.message?.content) {
-            if (typeof data.message.content === 'string') return data.message.content;
-            if (typeof data.message.content?.resposta === 'string') return data.message.content.resposta;
-        }
-
-        // 3) Estrutura tipo OpenAI:
-        // { choices: [ { message: { content: "..."} } ] }
-        const ch0 = data?.choices?.[0]?.message?.content;
-        if (typeof ch0 === 'string') return ch0;
-        if (typeof ch0?.resposta === 'string') return ch0.resposta;
-
-        // 4) Campo resposta direto
-        if (typeof data?.resposta === 'string') return data.resposta;
-
-        // 5) Fallback para texto do HTTP caso não seja JSON válido
-        if (fallbackText) return fallbackText.toString();
-
-        // 6) Último recurso: stringify alguns campos úteis
-        try { return JSON.stringify(data); } catch (_) { return 'Resposta em formato inesperado.'; }
-    }
-
-    // Botão para limpar o chat (e opcionalmente resetar a memória no n8n)
-    clearChatButton.addEventListener('click', async function() {
-        if (chatHistory.length > 0) {
-            if (!confirm('Tem certeza que deseja limpar a conversa atual?')) return;
-
-            // Limpa UI
-            chatMessages.innerHTML = '';
-            const welcomeDiv = document.createElement('div');
-            welcomeDiv.className = 'flex items-start';
-            welcomeDiv.innerHTML = `
-                <div class="flex-shrink-0 mr-3">
-                    <div class="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">AI</div>
-                </div>
-                <div class="bg-white rounded-lg p-4 shadow-md max-w-3xl">
-                    <p class="text-gray-800">
-                        Olá, <?php echo htmlspecialchars($userName); ?>! Sou o assistente de estudos do MedinFocus.
-                        Como posso ajudar você hoje? Pode me fazer perguntas sobre medicina, anatomia, fisiologia,
-                        ou qualquer assunto relacionado aos seus estudos.
-                    </p>
-                </div>
-            `;
-            chatMessages.appendChild(welcomeDiv);
-            chatHistory = [];
-
-            // (Opcional) Se o seu workflow aceita reset por sessionId:
-            try {
-                await fetch(N8N_ENDPOINT, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ sessionId: SESSION_ID, reset: true }),
-                    mode: 'cors'
-                });
-            } catch (e) {
-                // Se não houver suporte a reset no n8n, ignore
-                console.debug('Reset remoto opcional falhou/ignorado:', e);
-            }
-        }
-    });
-
-    // Toggle para mostrar/ocultar o painel de anotações em telas pequenas
-    toggleNotesButton?.addEventListener('click', function() {
-        if (notesPanel.classList.contains('hidden')) {
-            notesPanel.classList.remove('hidden');
-            notesPanel.classList.add('fixed', 'inset-0', 'z-40');
-            notesIcon.classList.add('hidden');
-            closeNotesIcon.classList.remove('hidden');
-        } else {
-            notesPanel.classList.add('hidden');
-            notesPanel.classList.remove('fixed', 'inset-0', 'z-40');
-            notesIcon.classList.remove('hidden');
-            closeNotesIcon.classList.add('hidden');
-        }
-    });
-
-    // Abrir modal para criar nova anotação
-    newNoteBtn?.addEventListener('click', function() {
-        document.getElementById('note_title').value = '';
-        document.getElementById('note_text').value = '';
-        noteModal.classList.remove('hidden');
-    });
-
-    // Fechar modal de anotação
-    cancelNoteBtn?.addEventListener('click', function() {
-        noteModal.classList.add('hidden');
-    });
-
-    // Fechar modal ao clicar fora dele
-    noteModal?.addEventListener('click', function(e) {
-        if (e.target === noteModal) {
-            noteModal.classList.add('hidden');
-        }
-    });
-
-    // Ajusta a altura do textarea conforme o conteúdo
-    userMessageInput.addEventListener('input', function() {
-        this.style.height = 'auto';
-        const newHeight = Math.min(this.scrollHeight, 150);
-        this.style.height = newHeight + 'px';
-    });
-
-    // Animação "digitando..."
-    const style = document.createElement('style');
-    style.innerHTML = `
-        .animate-typing { animation: typing 1s infinite; }
-        @keyframes typing {
-            0% { content: ""; }
-            25% { content: "."; }
-            50% { content: ".."; }
-            75% { content: "..."; }
-            100% { content: ""; }
-        }
+    let html = `
+      <div class="bg-white rounded-lg shadow-sm p-6 quiz-card">
+        <h2 class="text-2xl font-bold text-gray-800 mb-6">${escapeHTML(quizData.title)}</h2>
+        <form id="quiz-form" class="space-y-4">
     `;
-    document.head.appendChild(style);
 
-    // Utils
-    function openNoteModalWithText(text) {
-        document.getElementById('note_text').value = text;
-        noteModal.classList.remove('hidden');
-    }
+    quizData.questions.forEach((question, index) => {
+      html += `
+        <div class="border border-gray-200 rounded-lg p-4">
+          <p class="text-lg font-medium text-gray-900 mb-3">${index + 1}. ${escapeHTML(question.text)}</p>
+          <div class="space-y-2">
+      `;
+      question.answers.forEach(answer => {
+        const id = `q${index}_${btoa(unescape(encodeURIComponent(answer))).replace(/=/g,'')}`;
+        html += `
+          <label for="${id}" class="flex items-center space-x-2 cursor-pointer p-2 rounded-md hover:bg-gray-50">
+            <input id="${id}" type="radio" name="question-${index}" value="${escapeHTML(answer)}" class="h-4 w-4 text-blue-600 focus:ring-blue-500">
+            <span class="text-gray-700">${escapeHTML(answer)}</span>
+          </label>
+        `;
+      });
+      html += `</div></div>`;
+    });
 
-    function formatAIResponse(text) {
-        if (!text) return '';
-        // links clicáveis
-        text = text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="text-blue-600 hover:underline">$1</a>');
-        // quebras de linha
-        text = text.replace(/\n/g, '<br>');
-        return text;
-    }
+    html += `
+        <div class="flex justify-between items-center pt-2">
+          <button type="submit" class="px-6 py-2 bg-green-600 text-white font-medium rounded-md hover:bg-green-700">Finalizar Quiz</button>
+          <button type="button" id="back-to-select" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">Voltar</button>
+        </div>
+      </form>
+    </div>
+    <div id="quiz-results" class="mt-8 hidden"></div>`;
 
-    function getInitials(name) {
-        if (!name) return 'U';
-        return name.split(' ').map(part => part.charAt(0)).join('').toUpperCase().substring(0, 2);
-    }
+    quizContainer.innerHTML = html;
+    quizContainer.classList.remove('hidden');
 
-    function escapeHTML(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
+    document.getElementById('quiz-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      checkAnswers(quizData.questions);
+    });
+
+    document.getElementById('back-to-select').addEventListener('click', () => {
+      quizSelectionPanel.classList.remove('hidden');
+      quizContainer.innerHTML = '';
+      quizContainer.classList.add('hidden');
+    });
+  }
+
+  function checkAnswers(questions) {
+    let score = 0;
+    const resultsDiv = document.getElementById('quiz-results');
+    let resultsHtml = `
+      <div class="bg-white rounded-lg shadow-sm p-6">
+        <h3 class="text-2xl font-bold text-gray-800 mb-4">Seu Resultado</h3>
+        <div class="space-y-4">
+    `;
+
+    questions.forEach((q, i) => {
+      const selected = document.querySelector(`input[name="question-${i}"]:checked`);
+      const isCorrect = selected && selected.value === q.correct;
+      if (isCorrect) score++;
+
+      resultsHtml += isCorrect ? `
+        <div class="bg-green-50 p-4 rounded-lg border border-green-200 flex items-center gap-3">
+          <svg class="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+          <div>
+            <p class="font-medium text-green-800">Pergunta ${i + 1}: Resposta Correta!</p>
+            <p class="text-sm text-gray-600">Sua resposta: "${escapeHTML(selected ? selected.value : '')}"</p>
+          </div>
+        </div>` : `
+        <div class="bg-red-50 p-4 rounded-lg border border-red-200 flex items-center gap-3">
+          <svg class="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          <div>
+            <p class="font-medium text-red-800">Pergunta ${i + 1}: Resposta Incorreta.</p>
+            <p class="text-sm text-gray-600">Sua resposta: "${escapeHTML(selected ? selected.value : 'Nenhuma resposta')}"</p>
+            <p class="text-sm text-red-700">Resposta correta: "${escapeHTML(q.correct)}"</p>
+          </div>
+        </div>`;
+    });
+
+    resultsHtml += `
+        </div>
+        <div class="mt-8 text-center bg-gray-100 p-6 rounded-lg">
+          <p class="text-2xl font-extrabold text-blue-600">Sua Pontuação</p>
+          <p class="text-4xl font-extrabold mt-2">${score} / ${questions.length}</p>
+        </div>
+        <div class="mt-6 flex justify-center">
+          <button id="restart-quiz-btn" class="px-6 py-3 bg-blue-600 text-white font-medium rounded-full hover:bg-blue-700">Voltar à Seleção de Quizzes</button>
+        </div>
+      </div>
+    `;
+
+    resultsDiv.innerHTML = resultsHtml;
+    resultsDiv.classList.remove('hidden');
+
+    document.getElementById('restart-quiz-btn').addEventListener('click', () => {
+      quizSelectionPanel.classList.remove('hidden');
+      quizContainer.innerHTML = '';
+      quizContainer.classList.add('hidden');
+      resultsDiv.classList.add('hidden');
+    });
+
+    resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // ------- Inicialização
+  document.addEventListener('DOMContentLoaded', () => {
+    populateDropdown(disciplineSelect, mockQuizData.disciplines, '-- Selecione a Disciplina --');
+    populateDropdown(partialSelect,    mockQuizData.partials,    '-- Selecione a Parcial --');
+  });
+
+  // ------- Eventos
+  disciplineSelect.addEventListener('change', () => {
+    // Habilita parcial e reseta quiz
+    partialSelect.disabled = !disciplineSelect.value;
+    filterAndPopulateQuizzes();
+  });
+
+  partialSelect.addEventListener('change', filterAndPopulateQuizzes);
+
+  quizSelect.addEventListener('change', () => {
+    startQuizBtn.disabled = !quizSelect.value;
+  });
+
+  startQuizBtn.addEventListener('click', () => {
+    const id = quizSelect.value;
+    if (id) startQuiz(id); else showNotification('Por favor, selecione um quiz válido para começar.', true);
+  });
+
+  createQuizBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    showNotification('Funcionalidade de "Criar Quiz" em desenvolvimento!', false);
+  });
+
+  // ------- Sidebar mobile (fallback para #sidebar OU [data-sidebar])
+  if (openSidebarBtn && sidebar) {
+    openSidebarBtn.addEventListener('click', () => {
+      sidebar.classList.toggle('-translate-x-full');
+    });
+    document.addEventListener('click', (event) => {
+      const isInsideSidebar = sidebar.contains(event.target);
+      const isOnBtn = openSidebarBtn.contains(event.target);
+      if (!isInsideSidebar && !isOnBtn && !sidebar.classList.contains('-translate-x-full')) {
+        sidebar.classList.add('-translate-x-full');
+      }
+    });
+  }
+})();
 </script>
 
-<?php include_once 'includes/footer.php'; ?>
+<?php
+// 5) Footer global (fecha </body></html>)
+require_once __DIR__ . '/includes/footer.php';

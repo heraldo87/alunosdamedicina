@@ -67,7 +67,7 @@ include_once __DIR__ . '/includes/sidebar_nav.php';
                 <p class="text-sm font-light">Converse com nossa IA para tirar dúvidas.</p>
             </a>
 
-            <a href="#" class="block transform transition-transform duration-300 hover:scale-105 app-card-gradient from-green-600 to-cyan-500 p-6 rounded-3xl shadow-xl text-white flex flex-col items-start justify-center">
+            <a href="quizzes.php" class="block transform transition-transform duration-300 hover:scale-105 app-card-gradient from-green-600 to-cyan-500 p-6 rounded-3xl shadow-xl text-white flex flex-col items-start justify-center">
                 <div class="p-3 mb-4 inline-flex">
                     <svg class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 6h-4V4c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2v2H4c-1.1 0-2 .9-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2zM10 4h4v2h-4V4zM4 20v-2h16v2H4zm18-4H2v-6h20v6z"/>

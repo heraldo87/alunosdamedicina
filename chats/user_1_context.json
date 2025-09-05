@@ -1,0 +1,50 @@
+{
+    "active_session": [
+        {
+            "id": "68ba4782150d2",
+            "sender": "user",
+            "message": "Quantos ossos tem o corpor humano?",
+            "timestamp": "2025-09-05 10:14:26",
+            "tokens": 9
+        },
+        {
+            "id": "68ba478494f24",
+            "sender": "ai",
+            "message": "Desculpe, ocorreu um erro ao processar sua pergunta. Por favor, tente novamente.",
+            "timestamp": "2025-09-05 10:14:28",
+            "tokens": 20
+        },
+        {
+            "id": "68ba47c8bde2c",
+            "sender": "user",
+            "message": "Quantos ossos tem o corpor humano?",
+            "timestamp": "2025-09-05 10:15:36",
+            "tokens": 9
+        },
+        {
+            "id": "68ba47cb47f05",
+            "sender": "ai",
+            "message": "Desculpe, ocorreu um erro ao processar sua pergunta. Por favor, tente novamente.",
+            "timestamp": "2025-09-05 10:15:39",
+            "tokens": 20
+        },
+        {
+            "id": "68ba4a0571da1",
+            "sender": "user",
+            "message": "Olá, tudo bem?",
+            "timestamp": "2025-09-05 10:25:09",
+            "tokens": 4
+        },
+        {
+            "id": "68ba4a07f270a",
+            "sender": "ai",
+            "message": "Desculpe, ocorreu um erro ao processar sua pergunta. Por favor, tente novamente.",
+            "timestamp": "2025-09-05 10:25:11",
+            "tokens": 20
+        }
+    ],
+    "conversation_summary": "",
+    "key_topics": [],
+    "user_preferences": [],
+    "last_cleanup": "2025-09-05 10:14:16"
+}
