@@ -1,0 +1,33 @@
+{
+    "diretorios": [
+        {
+            "id": "teste_1756959487",
+            "nome": "teste",
+            "turma": "2\u00ba Ano",
+            "parent_dir": "",
+            "usuario_id": 1,
+            "data_criacao": "2025-09-04 12:18:07"
+        },
+        {
+            "id": "teste_1756959616",
+            "nome": "teste",
+            "turma": "1\u00ba Ano",
+            "parent_dir": "",
+            "usuario_id": 3,
+            "data_criacao": "2025-09-04 12:20:16"
+        }
+    ],
+    "arquivos": [
+        {
+            "id": "1756959626_20250901134555.pdf",
+            "nome": "20250901134555.pdf",
+            "arquivo": "1756959626_20250901134555.pdf",
+            "tamanho": 134825,
+            "tipo": "application\/pdf",
+            "turma": "1\u00ba Ano",
+            "diretorio_id": "",
+            "usuario_id": 3,
+            "data_upload": "2025-09-04 12:20:26"
+        }
+    ]
+}

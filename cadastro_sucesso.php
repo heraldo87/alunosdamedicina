@@ -65,7 +65,7 @@
             <p class="text-gray-600 mb-6">Sua conta foi criada. Você será redirecionado para a página de login em breve.</p>
             
             <!-- Link para redirecionamento manual -->
-            <p class="text-sm text-gray-500">Se não for redirecionado automaticamente, <a href="login.html" class="text-blue-600 hover:underline">clique aqui</a>.</p>
+            <p class="text-sm text-gray-500">Se não for redirecionado automaticamente, <a href="login.php" class="text-blue-600 hover:underline">clique aqui</a>.</p>
         </div>
     </div>
 

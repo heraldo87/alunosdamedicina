@@ -47,7 +47,7 @@ include_once __DIR__ . '/includes/sidebar_nav.php';
         <h2 class="text-2xl font-bold text-gray-800 mb-4">Aplicativos MedinFocus</h2>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4 md:gap-6 md:mt-8">
             
-            <a href="#" class="block transform transition-transform duration-300 hover:scale-105 app-card-gradient from-blue-600 to-teal-500 p-6 rounded-3xl shadow-xl text-white flex flex-col items-start justify-center">
+            <a href="uploads.php" class="block transform transition-transform duration-300 hover:scale-105 app-card-gradient from-blue-600 to-teal-500 p-6 rounded-3xl shadow-xl text-white flex flex-col items-start justify-center">
                 <div class="p-3 mb-4 inline-flex">
                     <svg class="h-10 w-10" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
@@ -57,7 +57,7 @@ include_once __DIR__ . '/includes/sidebar_nav.php';
                 <p class="text-sm font-light">Acesse nosso repositório de materiais.</p>
             </a>
 
-            <a href="#" class="block transform transition-transform duration-300 hover:scale-105 app-card-gradient from-purple-600 to-pink-500 p-6 rounded-3xl shadow-xl text-white flex flex-col items-start justify-center">
+            <a href="chat_ia.php" class="block transform transition-transform duration-300 hover:scale-105 app-card-gradient from-purple-600 to-pink-500 p-6 rounded-3xl shadow-xl text-white flex flex-col items-start justify-center">
                 <div class="p-3 mb-4 inline-flex">
                     <svg class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>

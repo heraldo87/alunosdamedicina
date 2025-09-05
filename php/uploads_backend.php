@@ -229,7 +229,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         exit;
     }
     
-    $userData = getUserData($_SESSION['user_id']);
+    $userData = getUserDataForUploads($_SESSION['user_id']);
     if (!$userData) {
         http_response_code(401);
         echo json_encode(['success' => false, 'message' => 'Usuário não encontrado']);
