@@ -1,391 +1,284 @@
-<?php
-// 1) Autenticação obrigatória
-require_once __DIR__ . '/php/auth_check.php';
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MedinFocus - AI Chat</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+    </style>
+</head>
+<body class="flex flex-col h-full antialiased bg-gray-100">
+    <div class="flex flex-1 overflow-hidden">
+        <!-- Área Principal de Chat -->
+        <main class="flex-1 flex flex-col p-6 max-w-4xl mx-auto w-full">
+            <h1 class="text-4xl font-extrabold text-blue-700 mb-6 text-center">MedinFocus IA</h1>
+            
+            <!-- Caixa de conversa -->
+            <div id="chat-box" class="flex-1 bg-white p-6 rounded-lg shadow-lg overflow-y-auto mb-4 border border-gray-200">
+                <!-- Mensagens do chat serão exibidas aqui -->
+            </div>
 
-// 2) Metadados da página (usados pelos partials/header & sidebar)
-$pageTitle  = 'Quizzes - MedinFocus';
-$activeMenu = 'quizzes';
-$userId     = (int)($_SESSION['user_id'] ?? 0);
+            <!-- Formulário de entrada de mensagem -->
+            <div class="flex items-center space-x-4">
+                <input type="text" id="user-input" class="flex-1 p-4 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors" placeholder="Pergunte sobre qualquer tema de medicina...">
+                <button id="send-btn" class="p-4 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors">
+                    Enviar
+                </button>
+            </div>
+        </main>
+        
+        <!-- Sidebar para Anotações -->
+        <div id="notes-sidebar" class="w-1/4 bg-white p-6 shadow-md overflow-y-auto hidden md:block">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4 border-b pb-2">Minhas Anotações</h2>
+            
+            <button id="new-note-btn" class="w-full bg-blue-600 text-white py-2 rounded-md font-semibold hover:bg-blue-700 transition-colors mb-4">
+                Nova Anotação
+            </button>
 
-// Nome seguro do usuário para saudação
-$nomeBase = $_SESSION['full_name']
-    ?? $_SESSION['user_name']
-    ?? $_SESSION['email']
-    ?? 'Aluno';
-$safeNome = htmlspecialchars(is_string($nomeBase) ? trim($nomeBase) : 'Aluno', ENT_QUOTES, 'UTF-8');
+            <!-- Formulário para Nova Anotação (inicialmente escondido) -->
+            <div id="new-note-form" class="hidden">
+                <input type="text" id="note-title-input" class="w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors mb-2" placeholder="Título da anotação">
+                <textarea id="note-content-input" class="w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors" rows="4" placeholder="Adicione o conteúdo da anotação..."></textarea>
+                <button id="save-note-btn" class="mt-2 w-full bg-blue-600 text-white py-2 rounded-md font-semibold hover:bg-blue-700 transition-colors">Salvar Anotação</button>
+                <div class="border-b my-4"></div>
+            </div>
 
-// 3) Partials padrão (mesmo padrão do index)
-// header.php deve abrir <!DOCTYPE html>, <html>, <head> (com Tailwind/Inter) e <body>
-require_once __DIR__ . '/includes/header.php';
-
-// Topbar (se existir)
-if (file_exists(__DIR__ . '/includes/topbar.php')) {
-    require_once __DIR__ . '/includes/topbar.php';
-}
-
-// Sidebar de navegação (o arquivo deve renderizar um elemento com id="sidebar" OU data-sidebar)
-require_once __DIR__ . '/includes/sidebar_nav.php';
-?>
-
-<style>
-  /* Estilos locais e leves (ideal mover para o CSS global do tema) */
-  .custom-scrollbar::-webkit-scrollbar { width: 8px; }
-  .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
-  .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-  .quiz-card { transition: transform .2s ease, box-shadow .2s ease; }
-  .quiz-card:hover { transform: translateY(-4px); box-shadow: 0 10px 15px rgba(0,0,0,.08); }
-  .modal-enter { animation: fadeIn .25s ease; }
-  @keyframes fadeIn { from {opacity:0; transform: translateY(-6px);} to {opacity:1; transform: translateY(0);} }
-</style>
-
-<div class="flex-1 flex flex-col min-h-0">
-  <!-- Header interno da página (mantém layout do tema) -->
-  <header class="bg-white shadow-sm p-4 flex items-center justify-between">
-    <button id="openSidebarBtn" class="text-gray-500 hover:text-gray-700 lg:hidden" aria-label="Abrir menu lateral">
-      <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-      </svg>
-    </button>
-    <span class="text-xl font-bold text-gray-800">Quizzes</span>
-    <span class="text-gray-600">Olá, <?= $safeNome ?>!</span>
-  </header>
-
-  <!-- Conteúdo principal -->
-  <main class="flex-1 p-4 bg-gray-50 overflow-y-auto custom-scrollbar">
-    <div class="max-w-4xl mx-auto py-6">
-      <!-- Painel de seleção do quiz -->
-      <section id="quiz-selection-panel" class="bg-white rounded-lg shadow-sm p-6 mb-8">
-        <h2 class="text-2xl font-semibold text-gray-800 mb-2">Escolha um Quiz para Começar</h2>
-        <p class="text-gray-600 mb-4">Selecione as opções abaixo para iniciar um novo desafio.</p>
-
-        <div class="flex flex-col md:flex-row md:items-center gap-4">
-          <div class="flex-1">
-            <label for="discipline-select" class="sr-only">Selecione a Disciplina</label>
-            <select id="discipline-select" class="w-full border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500">
-              <option value="" disabled selected>-- Selecione a Disciplina --</option>
-            </select>
-          </div>
-          <div class="flex-1">
-            <label for="partial-select" class="sr-only">Selecione a Parcial</label>
-            <select id="partial-select" class="w-full border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500" disabled>
-              <option value="" disabled selected>-- Selecione a Parcial --</option>
-            </select>
-          </div>
-          <div class="flex-1">
-            <label for="quiz-select" class="sr-only">Selecione o Quiz</label>
-            <select id="quiz-select" class="w-full border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500" disabled>
-              <option value="" disabled selected>-- Selecione o Quiz --</option>
-            </select>
-          </div>
+            <div id="notes-list" class="space-y-4">
+                <!-- Títulos das anotações serão carregados aqui -->
+            </div>
         </div>
-
-        <div class="flex flex-col md:flex-row md:items-center gap-4 mt-6">
-          <button id="start-quiz-btn" class="w-full md:w-auto px-6 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50" disabled>
-            Começar Quiz
-          </button>
-          <a href="#" id="create-quiz-btn" class="w-full md:w-auto px-6 py-2 border border-gray-300 text-gray-700 text-center font-medium rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300">
-            Criar meu quiz
-          </a>
-        </div>
-      </section>
-
-      <!-- Container do quiz renderizado -->
-      <div id="quiz-container" class="mt-8 hidden"></div>
-
-      <!-- Toast/Notificação -->
-      <div id="notification-modal" class="fixed inset-x-0 bottom-4 mx-auto p-4 bg-red-500 text-white rounded-lg shadow-lg w-fit transition-all duration-300 transform opacity-0 hidden z-50"></div>
     </div>
-  </main>
-</div>
 
-<?php
-// Debug opcional (aparece apenas no HTML, útil em dev)
-$lvl = $_SESSION['access_level'] ?? ($_SESSION['nivel_acesso'] ?? null);
-$apv = $_SESSION['aprovacao'] ?? null;
-echo "<!-- Debug: user_id=" . var_export($userId, true) . " access_level=" . var_export($lvl, true) . " aprovacao=" . var_export($apv, true) . " -->";
-?>
-
-<script>
-(() => {
-  // Expor userId se necessário para telemetria ou POSTs futuros
-  window.MEDINFOCUS = Object.assign({}, window.MEDINFOCUS || {}, {
-    userId: <?= json_encode($userId) ?>,
-  });
-
-  // ------- Elements
-  const disciplineSelect   = document.getElementById('discipline-select');
-  const partialSelect      = document.getElementById('partial-select');
-  const quizSelect         = document.getElementById('quiz-select');
-  const startQuizBtn       = document.getElementById('start-quiz-btn');
-  const createQuizBtn      = document.getElementById('create-quiz-btn');
-  const quizContainer      = document.getElementById('quiz-container');
-  const quizSelectionPanel = document.getElementById('quiz-selection-panel');
-  const notificationModal  = document.getElementById('notification-modal');
-  const openSidebarBtn     = document.getElementById('openSidebarBtn');
-  const sidebar            = document.getElementById('sidebar') || document.querySelector('[data-sidebar]');
-
-  // ------- Dados mockados (trocar por fetch() ao integrar backend)
-  const mockQuizData = {
-    disciplines: [
-      { id: 'anatomia',     name: 'Anatomia Humana' },
-      { id: 'fisiologia',   name: 'Fisiologia' },
-      { id: 'farmacologia', name: 'Farmacologia' },
-      { id: 'patologia',    name: 'Patologia' },
-    ],
-    partials: [
-      { id: 'p1', name: 'Primeiro Parcial' },
-      { id: 'p2', name: 'Segundo Parcial' },
-    ],
-    quizzes: [
-      { id: '1', title: 'Anatomia Básica',              disciplineId: 'anatomia',   partialId: 'p1' },
-      { id: '2', title: 'Fisiologia Cardiovascular',    disciplineId: 'fisiologia', partialId: 'p2' },
-      { id: '3', title: 'Farmacologia - Antibióticos',  disciplineId: 'farmacologia', partialId: 'p2' },
-      { id: '4', title: 'Patologia - Inflamação',       disciplineId: 'patologia',  partialId: 'p1' },
-    ],
-  };
-
-  const quizQuestionsData = {
-    '1': {
-      title: 'Anatomia Humana - Básica',
-      questions: [
-        { text: 'Qual é o maior osso do corpo humano?', answers: ['Fíbula', 'Fêmur', 'Úmero', 'Tíbia'], correct: 'Fêmur' },
-        { text: 'Qual órgão é responsável por bombear o sangue para todo o corpo?', answers: ['Pulmão', 'Fígado', 'Coração', 'Cérebro'], correct: 'Coração' },
-        { text: 'Quantos ossos tem o corpo humano adulto?', answers: ['206', '212', '270', '250'], correct: '206' },
-      ],
-    },
-    '2': {
-      title: 'Fisiologia do Sistema Cardiovascular',
-      questions: [
-        { text: 'Qual a principal função das artérias?', answers: ['Levar sangue para o coração', 'Levar sangue do coração para o corpo', 'Trocar gases no pulmão', 'Coagular o sangue'], correct: 'Levar sangue do coração para o corpo' },
-        { text: 'O que a sístole representa?', answers: ['Relaxamento do coração', 'Contração do coração', 'Fluxo de sangue nos capilares', 'Batimento cardíaco em repouso'], correct: 'Contração do coração' },
-      ],
-    },
-    '3': {
-      title: 'Farmacologia - Antibióticos',
-      questions: [
-        { text: 'Qual classe de antibióticos age inibindo a síntese da parede celular bacteriana?', answers: ['Macrolídeos', 'Aminoglicosídeos', 'Beta-lactâmicos', 'Tetraciclinas'], correct: 'Beta-lactâmicos' },
-      ],
-    },
-    '4': {
-      title: 'Patologia - Inflamação',
-      questions: [
-        { text: 'Qual é o principal mediador químico da inflamação aguda, responsável pela vasodilatação e aumento da permeabilidade vascular?', answers: ['Interleucina-1', 'Histamina', 'Fator de necrose tumoral', 'Prostaglandinas'], correct: 'Histamina' },
-      ],
-    },
-  };
-
-  // ------- Helpers UI
-  function showNotification(message, isError = true) {
-    if (!notificationModal) return;
-    notificationModal.textContent = message;
-    notificationModal.classList.toggle('bg-red-500', !!isError);
-    notificationModal.classList.toggle('bg-green-500', !isError);
-    notificationModal.classList.remove('hidden', 'opacity-0');
-    notificationModal.classList.add('opacity-100', 'modal-enter');
-    setTimeout(() => {
-      notificationModal.classList.remove('opacity-100');
-      notificationModal.classList.add('opacity-0');
-      setTimeout(() => notificationModal.classList.add('hidden'), 250);
-    }, 2500);
-  }
-
-  function escapeHTML(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
-
-  function populateDropdown(selectEl, data, placeholder) {
-    selectEl.innerHTML = `<option value="" disabled selected>${placeholder}</option>`;
-    (data || []).forEach(item => {
-      const opt = document.createElement('option');
-      opt.value = item.id;
-      opt.textContent = item.name || item.title;
-      selectEl.appendChild(opt);
-    });
-    selectEl.disabled = false;
-  }
-
-  function filterAndPopulateQuizzes() {
-    const d = disciplineSelect.value;
-    const p = partialSelect.value;
-    const placeholder = '-- Selecione o Quiz --';
-    if (d && p) {
-      const filtered = mockQuizData.quizzes.filter(q => q.disciplineId === d && q.partialId === p);
-      populateDropdown(quizSelect, filtered, placeholder);
-      startQuizBtn.disabled = true; // só habilita quando um quiz for escolhido
-    } else {
-      quizSelect.innerHTML = `<option value="" disabled selected>${placeholder}</option>`;
-      quizSelect.disabled = true;
-      startQuizBtn.disabled = true;
-    }
-  }
-
-  // ------- Renderização do Quiz
-  function startQuiz(quizId) {
-    quizSelectionPanel.classList.add('hidden');
-    renderQuiz(quizId);
-  }
-
-  function renderQuiz(quizId) {
-    const quizData = quizQuestionsData[quizId];
-    if (!quizData) {
-      quizContainer.innerHTML = `<div class="p-4 bg-red-100 text-red-800 rounded-md">Quiz não encontrado!</div>`;
-      quizContainer.classList.remove('hidden');
-      return;
-    }
-
-    let html = `
-      <div class="bg-white rounded-lg shadow-sm p-6 quiz-card">
-        <h2 class="text-2xl font-bold text-gray-800 mb-6">${escapeHTML(quizData.title)}</h2>
-        <form id="quiz-form" class="space-y-4">
-    `;
-
-    quizData.questions.forEach((question, index) => {
-      html += `
-        <div class="border border-gray-200 rounded-lg p-4">
-          <p class="text-lg font-medium text-gray-900 mb-3">${index + 1}. ${escapeHTML(question.text)}</p>
-          <div class="space-y-2">
-      `;
-      question.answers.forEach(answer => {
-        const id = `q${index}_${btoa(unescape(encodeURIComponent(answer))).replace(/=/g,'')}`;
-        html += `
-          <label for="${id}" class="flex items-center space-x-2 cursor-pointer p-2 rounded-md hover:bg-gray-50">
-            <input id="${id}" type="radio" name="question-${index}" value="${escapeHTML(answer)}" class="h-4 w-4 text-blue-600 focus:ring-blue-500">
-            <span class="text-gray-700">${escapeHTML(answer)}</span>
-          </label>
-        `;
-      });
-      html += `</div></div>`;
-    });
-
-    html += `
-        <div class="flex justify-between items-center pt-2">
-          <button type="submit" class="px-6 py-2 bg-green-600 text-white font-medium rounded-md hover:bg-green-700">Finalizar Quiz</button>
-          <button type="button" id="back-to-select" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">Voltar</button>
+    <!-- Modal para mensagens de aviso -->
+    <div id="modal" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-50 hidden">
+        <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
+            <p id="modal-message" class="text-center font-semibold text-gray-800"></p>
+            <button id="modal-close-btn" class="mt-4 w-full bg-blue-600 text-white py-2 rounded-md font-semibold hover:bg-blue-700">OK</button>
         </div>
-      </form>
     </div>
-    <div id="quiz-results" class="mt-8 hidden"></div>`;
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore-compat.js"></script>
+    
+    <script type="module">
+        // Variáveis globais de ambiente (definidas no Canvas)
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-    quizContainer.innerHTML = html;
-    quizContainer.classList.remove('hidden');
+        let db, auth, userId;
 
-    document.getElementById('quiz-form').addEventListener('submit', (e) => {
-      e.preventDefault();
-      checkAnswers(quizData.questions);
-    });
+        // Inicialização do Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore(app);
+        auth = firebase.auth(app);
 
-    document.getElementById('back-to-select').addEventListener('click', () => {
-      quizSelectionPanel.classList.remove('hidden');
-      quizContainer.innerHTML = '';
-      quizContainer.classList.add('hidden');
-    });
-  }
+        // Referências para os elementos do DOM
+        const chatBox = document.getElementById('chat-box');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+        const notesList = document.getElementById('notes-list');
+        const newNoteBtn = document.getElementById('new-note-btn');
+        const newNoteForm = document.getElementById('new-note-form');
+        const noteTitleInput = document.getElementById('note-title-input');
+        const noteContentInput = document.getElementById('note-content-input');
+        const saveNoteBtn = document.getElementById('save-note-btn');
+        const modal = document.getElementById('modal');
+        const modalMessage = document.getElementById('modal-message');
+        const modalCloseBtn = document.getElementById('modal-close-btn');
 
-  function checkAnswers(questions) {
-    let score = 0;
-    const resultsDiv = document.getElementById('quiz-results');
-    let resultsHtml = `
-      <div class="bg-white rounded-lg shadow-sm p-6">
-        <h3 class="text-2xl font-bold text-gray-800 mb-4">Seu Resultado</h3>
-        <div class="space-y-4">
-    `;
+        // Função para mostrar o modal de aviso
+        function showModal(message) {
+            modalMessage.textContent = message;
+            modal.classList.remove('hidden');
+        }
 
-    questions.forEach((q, i) => {
-      const selected = document.querySelector(`input[name="question-${i}"]:checked`);
-      const isCorrect = selected && selected.value === q.correct;
-      if (isCorrect) score++;
+        // Evento para fechar o modal
+        modalCloseBtn.addEventListener('click', () => {
+            modal.classList.add('hidden');
+        });
 
-      resultsHtml += isCorrect ? `
-        <div class="bg-green-50 p-4 rounded-lg border border-green-200 flex items-center gap-3">
-          <svg class="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-          <div>
-            <p class="font-medium text-green-800">Pergunta ${i + 1}: Resposta Correta!</p>
-            <p class="text-sm text-gray-600">Sua resposta: "${escapeHTML(selected ? selected.value : '')}"</p>
-          </div>
-        </div>` : `
-        <div class="bg-red-50 p-4 rounded-lg border border-red-200 flex items-center gap-3">
-          <svg class="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-          <div>
-            <p class="font-medium text-red-800">Pergunta ${i + 1}: Resposta Incorreta.</p>
-            <p class="text-sm text-gray-600">Sua resposta: "${escapeHTML(selected ? selected.value : 'Nenhuma resposta')}"</p>
-            <p class="text-sm text-red-700">Resposta correta: "${escapeHTML(q.correct)}"</p>
-          </div>
-        </div>`;
-    });
+        // Simulação de resposta da IA
+        function getAiResponse(text) {
+            return new Promise(resolve => {
+                setTimeout(() => {
+                    const response = `Com base na sua pergunta sobre "${text}", aqui está uma explicação detalhada...`;
+                    resolve(response);
+                }, 1500); // Simula um delay de 1.5s
+            });
+        }
 
-    resultsHtml += `
-        </div>
-        <div class="mt-8 text-center bg-gray-100 p-6 rounded-lg">
-          <p class="text-2xl font-extrabold text-blue-600">Sua Pontuação</p>
-          <p class="text-4xl font-extrabold mt-2">${score} / ${questions.length}</p>
-        </div>
-        <div class="mt-6 flex justify-center">
-          <button id="restart-quiz-btn" class="px-6 py-3 bg-blue-600 text-white font-medium rounded-full hover:bg-blue-700">Voltar à Seleção de Quizzes</button>
-        </div>
-      </div>
-    `;
+        // Função para adicionar uma mensagem ao chat
+        function addMessage(sender, message) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('p-3', 'rounded-lg', 'shadow-sm', 'max-w-md', 'mb-2');
+            
+            if (sender === 'user') {
+                messageDiv.classList.add('bg-blue-500', 'text-white', 'self-end', 'ml-auto');
+            } else {
+                messageDiv.classList.add('bg-gray-200', 'text-gray-800', 'self-start');
+            }
+            
+            messageDiv.textContent = message;
+            chatBox.appendChild(messageDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
 
-    resultsDiv.innerHTML = resultsHtml;
-    resultsDiv.classList.remove('hidden');
+        // Função para carregar as anotações do Firestore
+        async function loadNotes() {
+            if (!userId) {
+                console.log("Usuário não autenticado, não é possível carregar anotações.");
+                return;
+            }
 
-    document.getElementById('restart-quiz-btn').addEventListener('click', () => {
-      quizSelectionPanel.classList.remove('hidden');
-      quizContainer.innerHTML = '';
-      quizContainer.classList.add('hidden');
-      resultsDiv.classList.add('hidden');
-    });
+            const notesCollectionRef = db.collection(`artifacts/${appId}/users/${userId}/notes`);
+            
+            notesCollectionRef.onSnapshot(snapshot => {
+                notesList.innerHTML = ''; // Limpa a lista para evitar duplicatas
+                snapshot.forEach(doc => {
+                    const note = doc.data();
+                    const noteId = doc.id;
+                    const noteDiv = document.createElement('div');
+                    noteDiv.classList.add('note-item', 'p-4', 'bg-gray-100', 'rounded-md', 'border', 'border-gray-200', 'text-sm', 'relative', 'cursor-pointer');
+                    noteDiv.innerHTML = `
+                        <h4 class="font-semibold text-gray-800 truncate">${note.title}</h4>
+                        <div class="note-content hidden mt-2 text-gray-700">${note.content}</div>
+                        <button class="delete-note-btn absolute top-2 right-2 text-red-500 hover:text-red-700 font-bold" data-id="${noteId}">&times;</button>
+                    `;
+                    notesList.appendChild(noteDiv);
+                });
+            }, error => {
+                console.error("Erro ao carregar anotações: ", error);
+                showModal("Erro ao carregar anotações. Por favor, tente novamente.");
+            });
+        }
 
-    resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
+        // Função para salvar uma anotação no Firestore
+        async function saveNote(noteTitle, noteContent) {
+            if (!userId) {
+                showModal("Não é possível salvar a anotação. Por favor, tente novamente mais tarde.");
+                return;
+            }
+            
+            const notesCollectionRef = db.collection(`artifacts/${appId}/users/${userId}/notes`);
+            
+            try {
+                await notesCollectionRef.add({
+                    title: noteTitle,
+                    content: noteContent,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                noteTitleInput.value = '';
+                noteContentInput.value = '';
+                newNoteForm.classList.add('hidden'); // Esconde o formulário após salvar
+            } catch (error) {
+                console.error("Erro ao salvar a anotação: ", error);
+                showModal("Erro ao salvar a anotação. Por favor, tente novamente.");
+            }
+        }
+        
+        // Função para deletar uma anotação do Firestore
+        async function deleteNote(noteId) {
+            if (!userId) {
+                showModal("Não é possível deletar a anotação. Por favor, tente novamente mais tarde.");
+                return;
+            }
 
-  // ------- Inicialização
-  document.addEventListener('DOMContentLoaded', () => {
-    populateDropdown(disciplineSelect, mockQuizData.disciplines, '-- Selecione a Disciplina --');
-    populateDropdown(partialSelect,    mockQuizData.partials,    '-- Selecione a Parcial --');
-  });
+            const noteDocRef = db.doc(`artifacts/${appId}/users/${userId}/notes/${noteId}`);
+            try {
+                await noteDocRef.delete();
+            } catch (error) {
+                console.error("Erro ao deletar a anotação: ", error);
+                showModal("Erro ao deletar a anotação. Por favor, tente novamente.");
+            }
+        }
+        
+        // Evento para envio de mensagem
+        sendBtn.addEventListener('click', async () => {
+            const userText = userInput.value.trim();
+            if (userText === '') return;
 
-  // ------- Eventos
-  disciplineSelect.addEventListener('change', () => {
-    // Habilita parcial e reseta quiz
-    partialSelect.disabled = !disciplineSelect.value;
-    filterAndPopulateQuizzes();
-  });
+            addMessage('user', userText);
+            userInput.value = '';
+            
+            // Adiciona uma mensagem de "digitando..."
+            const typingIndicator = document.createElement('div');
+            typingIndicator.id = 'typing-indicator';
+            typingIndicator.classList.add('p-3', 'text-gray-500', 'italic');
+            typingIndicator.textContent = 'IA está digitando...';
+            chatBox.appendChild(typingIndicator);
+            chatBox.scrollTop = chatBox.scrollHeight;
 
-  partialSelect.addEventListener('change', filterAndPopulateQuizzes);
+            const aiResponse = await getAiResponse(userText);
+            
+            // Remove a mensagem de "digitando..." e adiciona a resposta da IA
+            typingIndicator.remove();
+            addMessage('ai', aiResponse);
+        });
 
-  quizSelect.addEventListener('change', () => {
-    startQuizBtn.disabled = !quizSelect.value;
-  });
+        // Evento para mostrar/esconder o formulário de anotação
+        newNoteBtn.addEventListener('click', () => {
+            newNoteForm.classList.toggle('hidden');
+        });
 
-  startQuizBtn.addEventListener('click', () => {
-    const id = quizSelect.value;
-    if (id) startQuiz(id); else showNotification('Por favor, selecione um quiz válido para começar.', true);
-  });
+        // Evento para salvar anotação
+        saveNoteBtn.addEventListener('click', () => {
+            const noteTitle = noteTitleInput.value.trim();
+            const noteContent = noteContentInput.value.trim();
 
-  createQuizBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    showNotification('Funcionalidade de "Criar Quiz" em desenvolvimento!', false);
-  });
+            if (noteTitle === '' || noteContent === '') {
+                showModal("Por favor, preencha o título e o conteúdo da anotação.");
+                return;
+            }
+            saveNote(noteTitle, noteContent);
+        });
+        
+        // Evento para deletar e expandir/esconder anotação
+        notesList.addEventListener('click', (e) => {
+            if (e.target.classList.contains('delete-note-btn')) {
+                const noteId = e.target.dataset.id;
+                deleteNote(noteId);
+            } else if (e.target.closest('.note-item')) {
+                const noteItem = e.target.closest('.note-item');
+                const content = noteItem.querySelector('.note-content');
+                content.classList.toggle('hidden');
+            }
+        });
 
-  // ------- Sidebar mobile (fallback para #sidebar OU [data-sidebar])
-  if (openSidebarBtn && sidebar) {
-    openSidebarBtn.addEventListener('click', () => {
-      sidebar.classList.toggle('-translate-x-full');
-    });
-    document.addEventListener('click', (event) => {
-      const isInsideSidebar = sidebar.contains(event.target);
-      const isOnBtn = openSidebarBtn.contains(event.target);
-      if (!isInsideSidebar && !isOnBtn && !sidebar.classList.contains('-translate-x-full')) {
-        sidebar.classList.add('-translate-x-full');
-      }
-    });
-  }
-})();
-</script>
+        // Ativa o envio com a tecla Enter no input de texto
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendBtn.click();
+            }
+        });
 
-<?php
-// 5) Footer global (fecha </body></html>)
-require_once __DIR__ . '/includes/footer.php';
+        // Monitora o estado de autenticação para carregar dados
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                userId = user.uid;
+                await loadNotes();
+            } else {
+                try {
+                    if (initialAuthToken) {
+                        await auth.signInWithCustomToken(initialAuthToken);
+                    } else {
+                        await auth.signInAnonymously();
+                    }
+                } catch (error) {
+                    console.error("Erro na autenticação: ", error);
+                    showModal("Erro na autenticação. Algumas funcionalidades podem não funcionar.");
+                }
+            }
+        });
+    </script>
+</body>
+</html>

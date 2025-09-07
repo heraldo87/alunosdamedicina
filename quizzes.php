@@ -1,10 +1,7 @@
 <?php
 /**
  * quizzes.php — Seleciona Disciplina/Parcial/Quiz e REDIRECIONA para form_quiz.php
- * - Usa php/conn.php (PDO $pdo OU MySQLi $conn/$mysqli)
- * - SSR: carrega Disciplinas e Parciais
- * - AJAX interno: ?ajax=quizzes_list (retorna quizzes para os filtros)
- * - Ao clicar em "Começar", faz window.location para form_quiz.php passando parâmetros via GET
+ * Agora envia também a quantidade de questões (slider 5–20) via GET como ?qtd=NN
  */
 
 header('X-Frame-Options: SAMEORIGIN');
@@ -54,7 +51,6 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'quizzes_list') {
   $id_par  = (int)($_GET['id_parcial'] ?? 0);
   if ($id_disc <= 0 || $id_par <= 0) { http_response_code(400); echo json_encode(['error'=>'Parâmetros inválidos']); exit; }
   try {
-    // ajuste os nomes de colunas conforme seu schema real
     $rows = db_query_all(
       "SELECT id_quiz, titulo
          FROM quizzes
@@ -86,9 +82,11 @@ require_once __DIR__ . '/includes/sidebar_nav.php';
   <div class="max-w-5xl mx-auto p-4">
     <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
       <h2 class="text-2xl font-bold text-gray-800 mb-1">Escolha um Quiz</h2>
-      <p class="text-gray-500 mb-5">Selecione Disciplina e Parcial para listar os quizzes disponíveis. Ao prosseguir, você será redirecionado para <code>form_quiz.php</code>.</p>
-
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+      <p class="text-gray-500 mb-5">
+        Selecione Disciplina e Parcial, depois o Quiz. Escolha também a quantidade de questões (5–20).
+      </p>
+    <br>
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
         <div>
           <label for="discipline" class="block text-sm text-gray-600 mb-1">Disciplina</label>
           <select id="discipline" class="w-full border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500">
@@ -98,6 +96,7 @@ require_once __DIR__ . '/includes/sidebar_nav.php';
             <?php endforeach; ?>
           </select>
         </div>
+
         <div>
           <label for="partial" class="block text-sm text-gray-600 mb-1">Parcial</label>
           <select id="partial" class="w-full border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500">
@@ -107,17 +106,31 @@ require_once __DIR__ . '/includes/sidebar_nav.php';
             <?php endforeach; ?>
           </select>
         </div>
+
         <div>
           <label for="quiz" class="block text-sm text-gray-600 mb-1">Quiz</label>
           <select id="quiz" class="w-full border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500" disabled>
             <option value="">-- Selecione o Quiz --</option>
           </select>
         </div>
+
+        <!-- Novo: slider de quantidade -->
+        <div>
+          <label for="qtd" class="block text-sm text-gray-600 mb-1">Quantidade de questões</label>
+          <div class="flex items-center gap-3">
+            <input id="qtd" type="range" min="5" max="20" value="10"
+                   class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+            <span id="qtdView" class="w-10 text-right font-semibold text-blue-600">10</span>
+          </div>
+          <p class="text-xs text-gray-400 mt-1">Envio por GET como <code>qtd</code></p>
+        </div>
       </div>
 
       <div class="flex items-center gap-3">
-        <button id="btnGo" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-semibold disabled:opacity-50" disabled>Ir para form_quiz.php</button>
-        <span class="text-sm text-gray-500">Dica: preencha os 3 campos acima</span>
+        <button id="btnGo" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-semibold disabled:opacity-50" disabled>
+          Ir para form_quiz.php
+        </button>
+        <span class="text-sm text-gray-500">Dica: preencha os 3 campos e ajuste a quantidade se quiser</span>
       </div>
     </div>
   </div>
@@ -128,6 +141,11 @@ require_once __DIR__ . '/includes/sidebar_nav.php';
   const selPar   = document.getElementById('partial');
   const selQuiz  = document.getElementById('quiz');
   const btnGo    = document.getElementById('btnGo');
+
+  // Slider de quantidade
+  const qtd      = document.getElementById('qtd');
+  const qtdView  = document.getElementById('qtdView');
+  qtd.addEventListener('input', ()=>{ qtdView.textContent = qtd.value; });
 
   async function loadQuizzes(){
     selQuiz.innerHTML = '<option value="">Carregando...</option>';
@@ -141,7 +159,7 @@ require_once __DIR__ . '/includes/sidebar_nav.php';
       if(Array.isArray(data) && data.length){
         data.forEach(q=>{
           const o = document.createElement('option');
-          o.value = q.id_quiz; o.textContent = q.titulo; selQuiz.appendChild(o);
+          o.value = q.id_quiz; o.textContent = q.titulo || `Quiz #${q.id_quiz}`; selQuiz.appendChild(o);
         });
         selQuiz.disabled = false;
       } else {
@@ -151,17 +169,23 @@ require_once __DIR__ . '/includes/sidebar_nav.php';
   }
 
   selDisc.addEventListener('change', loadQuizzes);
-  selPar.addEventListener('change', loadQuizzes);
+  selPar .addEventListener('change', loadQuizzes);
   selQuiz.addEventListener('change', ()=>{ btnGo.disabled = !selQuiz.value; });
 
-  // Redireciona para form_quiz.php com os parâmetros selecionados
+  // Redireciona para form_quiz.php com os parâmetros e a quantidade (qtd)
   btnGo.addEventListener('click', ()=>{
     const id_disc = selDisc.value; const id_par = selPar.value; const id_quiz = selQuiz.value;
     if(!id_disc || !id_par || !id_quiz) return;
+    // normaliza qtd (5..20)
+    let n = parseInt(qtd.value || '10', 10);
+    if (isNaN(n)) n = 10;
+    n = Math.min(20, Math.max(5, n));
+
     const url = new URL('form_quiz.php', window.location.origin);
     url.searchParams.set('id_disciplina', id_disc);
     url.searchParams.set('id_parcial', id_par);
     url.searchParams.set('id_quiz', id_quiz);
+    url.searchParams.set('qtd', String(n)); // <<<<<<<<<<<<<<<< envia quantidade
     window.location.href = url.toString();
   });
 </script>
