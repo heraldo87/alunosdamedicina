@@ -22,8 +22,10 @@ $nomeUsuario = $_SESSION['user_name'] ?? 'Acadêmico';
             theme: {
                 extend: {
                     colors: {
-                        'brand-dark': '#0f172a', // Slate 900
-                        'brand-primary': '#0ea5e9', // Sky 500
+                        brand: {
+                            dark: '#0b0f1a', // Slate 900
+                            primary: '#0ea5e9', // Sky 500
+                        }
                     }
                 }
             }
@@ -58,11 +60,11 @@ $nomeUsuario = $_SESSION['user_name'] ?? 'Acadêmico';
                     Mentor <span class="text-brand-primary">IA</span>
                 </h1>
                 <p class="text-slate-400 mt-3 max-w-2xl text-lg font-medium">
-                    Bem-vindo, <?php echo $nomeUsuario; ?>. Escolha sua interface de consulta médica inteligente.
+                    Bem-vindo, <?php echo $nomeUsuario; ?>. Acesse nossa ferramenta de suporte à decisão clínica.
                 </p>
             </header>
 
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl">
                 
                 <a href="chat_texto.php" class="group relative overflow-hidden glass-card-dark rounded-[2.5rem] p-10 hover:border-brand-primary/40 transition-all duration-500">
                     <div class="absolute -right-20 -top-20 w-64 h-64 bg-brand-primary/5 rounded-full blur-3xl group-hover:bg-brand-primary/10 transition-colors"></div>
@@ -81,22 +83,12 @@ $nomeUsuario = $_SESSION['user_name'] ?? 'Acadêmico';
                     </div>
                 </a>
 
-                <a href="chat_voz.php" class="group relative overflow-hidden glass-card-dark rounded-[2.5rem] p-10 hover:border-emerald-500/40 transition-all duration-500">
-                    <div class="absolute -right-20 -top-20 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl group-hover:bg-emerald-500/10 transition-colors"></div>
-                    
-                    <div class="relative z-10">
-                        <div class="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-400 mb-8 group-hover:scale-110 group-hover:bg-emerald-500 group-hover:text-white transition-all duration-500 shadow-xl shadow-emerald-500/5">
-                            <i class="fa-solid fa-microphone-lines text-3xl"></i>
-                        </div>
-                        <h3 class="text-2xl font-bold text-white mb-4">Consultoria por Voz</h3>
-                        <p class="text-slate-400 text-base leading-relaxed mb-8">
-                            Interação mãos-livres para o ambiente prático. Fale sua dúvida e ouça a orientação clínica de forma rápida e eficiente.
-                        </p>
-                        <div class="flex items-center text-emerald-400 font-black text-xs uppercase tracking-widest">
-                            Iniciar Voz <i class="fa-solid fa-chevron-right ml-2 group-hover:translate-x-2 transition-transform"></i>
-                        </div>
+                <div class="hidden md:flex flex-col justify-center items-center border-2 border-dashed border-slate-800 rounded-[2.5rem] p-10 opacity-50 select-none">
+                    <div class="w-16 h-16 bg-slate-800 rounded-2xl flex items-center justify-center text-slate-600 mb-4">
+                        <i class="fa-solid fa-hammer text-2xl"></i>
                     </div>
-                </a>
+                    <p class="text-slate-500 font-bold text-sm uppercase tracking-wider">Módulos em Desenvolvimento</p>
+                </div>
 
             </div>
 

@@ -1,7 +1,13 @@
 <?php
+// ARQUIVO: chat_texto.php
 session_start();
 require_once 'php/config.php';
-if (!isset($_SESSION['user_id'])) { header("Location: login.php"); exit; }
+
+// Verificação de Segurança
+if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
+    header('Location: login.php');
+    exit;
+}
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -12,112 +18,138 @@ if (!isset($_SESSION['user_id'])) { header("Location: login.php"); exit; }
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script>
-        tailwind.config = { theme: { extend: { colors: { 'brand-dark': '#0f172a', 'brand-primary': '#0ea5e9' } } } }
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { dark: '#0b0f1a', primary: '#0ea5e9' }
+                    }
+                }
+            }
+        }
     </script>
     <style>
-        .chat-container { height: calc(100vh - 180px); }
-        .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); }
-        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
+        .chat-scroll::-webkit-scrollbar { width: 4px; }
+        .chat-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
     </style>
 </head>
-<body class="bg-[#0b0f1a] text-slate-200 font-sans antialiased overflow-hidden">
+<body class="bg-brand-dark text-slate-200 font-sans h-screen flex overflow-hidden">
 
-    <div class="flex h-screen overflow-hidden">
-        <?php include 'includes/sidebar.php'; ?>
+    <?php include 'includes/sidebar.php'; ?>
 
-        <main class="flex-1 flex flex-col p-4 md:p-8">
-            <header class="flex items-center justify-between mb-6">
-                <div class="flex items-center gap-4">
-                    <a href="chat_ia.php" class="p-2 hover:bg-slate-800 rounded-xl transition-colors">
-                        <i class="fa-solid fa-chevron-left"></i>
-                    </a>
-                    <h1 class="text-xl font-bold">Chat de Dúvida Médica</h1>
-                </div>
-                <div class="flex items-center gap-2 text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
-                    <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div> GPT-3.5 ONLINE
-                </div>
-            </header>
-
-            <div id="chatWindow" class="flex-1 overflow-y-auto pr-4 mb-6 chat-container custom-scrollbar space-y-4">
-                <div class="flex gap-4 max-w-3xl">
-                    <div class="w-8 h-8 rounded-lg bg-brand-primary flex items-center justify-center flex-shrink-0">
-                        <i class="fa-solid fa-robot text-xs text-white"></i>
-                    </div>
-                    <div class="glass-card p-4 rounded-2xl rounded-tl-none text-sm leading-relaxed">
-                        Olá! Sou seu Mentor IA. Como posso auxiliar em sua conduta clínica ou dúvida acadêmica hoje?
-                    </div>
+    <main class="flex-1 flex flex-col relative w-full">
+        <header class="h-16 border-b border-slate-800 flex items-center justify-between px-6 bg-slate-900/50 backdrop-blur-md">
+            <div class="flex items-center gap-4">
+                <a href="chat_ia.php" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-800 text-slate-400 transition-colors">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </a>
+                <div>
+                    <h1 class="font-bold text-white leading-tight">Mentor Clínico</h1>
+                    <p class="text-[10px] text-emerald-500 font-bold uppercase tracking-wider">
+                        <i class="fa-solid fa-circle text-[8px] mr-1 animate-pulse"></i>Online
+                    </p>
                 </div>
             </div>
+        </header>
 
-            <div class="relative max-w-4xl mx-auto w-full">
-                <form id="chatForm" class="flex gap-3 items-center bg-slate-900/50 p-2 rounded-2xl border border-slate-800 shadow-2xl">
-                    <input type="text" id="userInput" placeholder="Digite sua dúvida médica aqui..." 
-                           class="flex-1 bg-transparent border-none focus:ring-0 text-sm px-4 py-2 outline-none">
-                    <button type="submit" id="sendBtn" class="bg-brand-primary hover:bg-brand-primary/80 text-white w-10 h-10 rounded-xl flex items-center justify-center transition-all">
-                        <i class="fa-solid fa-paper-plane text-xs"></i>
-                    </button>
-                </form>
+        <div id="chatWindow" class="flex-1 overflow-y-auto p-6 space-y-6 chat-scroll pb-32">
+            <div class="flex gap-4">
+                <div class="w-8 h-8 rounded-lg bg-brand-primary flex items-center justify-center flex-shrink-0 mt-1">
+                    <i class="fa-solid fa-robot text-xs text-white"></i>
+                </div>
+                <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-2xl rounded-tl-none max-w-2xl">
+                    <p class="text-sm text-slate-300 leading-relaxed">
+                        Olá! Sou a IA do MedInFocus. Posso ajudar com dúvidas sobre farmacologia, fisiologia, análise de casos ou diretrizes médicas. Como posso ser útil?
+                    </p>
+                </div>
             </div>
-        </main>
-    </div>
+        </div>
+
+        <div class="absolute bottom-0 w-full bg-brand-dark border-t border-slate-800 p-4 md:p-6">
+            <form id="chatForm" class="relative max-w-4xl mx-auto flex gap-3">
+                <input type="text" id="userInput" 
+                    class="w-full bg-slate-900 border border-slate-700 text-slate-200 text-sm rounded-xl px-4 py-3 focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-all placeholder-slate-500"
+                    placeholder="Ex: Qual a conduta inicial para cetoacidose diabética?" autocomplete="off">
+                
+                <button type="submit" id="sendBtn" class="bg-brand-primary hover:bg-sky-600 text-white px-6 rounded-xl font-medium transition-colors flex items-center gap-2">
+                    <i class="fa-regular fa-paper-plane"></i>
+                </button>
+            </form>
+        </div>
+    </main>
 
     <script>
-        const chatForm = document.getElementById('chatForm');
-        const userInput = document.getElementById('userInput');
+        const form = document.getElementById('chatForm');
+        const input = document.getElementById('userInput');
         const chatWindow = document.getElementById('chatWindow');
 
-        function appendMessage(role, text) {
+        function addMessage(text, isUser) {
             const div = document.createElement('div');
-            div.className = `flex gap-4 max-w-3xl ${role === 'user' ? 'ml-auto flex-row-reverse' : ''}`;
+            div.className = `flex gap-4 ${isUser ? 'flex-row-reverse' : ''}`;
             
-            const iconBg = role === 'user' ? 'bg-slate-700' : 'bg-brand-primary';
-            const icon = role === 'user' ? 'fa-user' : 'fa-robot';
-            const cardStyle = role === 'user' ? 'bg-brand-primary/20 border-brand-primary/30 rounded-tr-none' : 'glass-card rounded-tl-none';
+            const icon = isUser 
+                ? `<div class="w-8 h-8 rounded-lg bg-slate-700 flex items-center justify-center flex-shrink-0 mt-1"><i class="fa-solid fa-user text-xs"></i></div>`
+                : `<div class="w-8 h-8 rounded-lg bg-brand-primary flex items-center justify-center flex-shrink-0 mt-1"><i class="fa-solid fa-robot text-xs"></i></div>`;
+
+            const bubbleClass = isUser 
+                ? 'bg-brand-primary/10 border border-brand-primary/20 text-sky-100 rounded-tr-none' 
+                : 'bg-slate-800/50 border border-slate-700 text-slate-300 rounded-tl-none';
 
             div.innerHTML = `
-                <div class="w-8 h-8 rounded-lg ${iconBg} flex items-center justify-center flex-shrink-0">
-                    <i class="fa-solid ${icon} text-xs text-white"></i>
-                </div>
-                <div class="${cardStyle} p-4 rounded-2xl text-sm leading-relaxed">
+                ${icon}
+                <div class="${bubbleClass} p-4 rounded-2xl max-w-2xl text-sm leading-relaxed shadow-sm">
                     ${text}
                 </div>
             `;
+            
             chatWindow.appendChild(div);
             chatWindow.scrollTop = chatWindow.scrollHeight;
         }
 
-        chatForm.onsubmit = async (e) => {
+        form.onsubmit = async (e) => {
             e.preventDefault();
-            const message = userInput.value.trim();
-            if (!message) return;
+            const msg = input.value.trim();
+            if(!msg) return;
 
-            appendMessage('user', message);
-            userInput.value = '';
-            
-            // Efeito de loading
+            addMessage(msg, true);
+            input.value = '';
+
+            // Loading
+            const loadingId = 'loading-' + Date.now();
             const loadingDiv = document.createElement('div');
-            loadingDiv.className = 'text-[10px] text-slate-500 animate-pulse ml-12';
-            loadingDiv.innerText = 'Mentor IA está analisando...';
+            loadingDiv.id = loadingId;
+            loadingDiv.className = 'flex gap-4';
+            loadingDiv.innerHTML = `
+                <div class="w-8 h-8 rounded-lg bg-brand-primary flex items-center justify-center flex-shrink-0 mt-1"><i class="fa-solid fa-robot text-xs text-white"></i></div>
+                <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-2xl rounded-tl-none">
+                    <div class="flex gap-1">
+                        <div class="w-2 h-2 bg-slate-500 rounded-full animate-bounce"></div>
+                        <div class="w-2 h-2 bg-slate-500 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+                        <div class="w-2 h-2 bg-slate-500 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                    </div>
+                </div>
+            `;
             chatWindow.appendChild(loadingDiv);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
 
             try {
-                const response = await fetch('php/processar_chat.php', {
+                const res = await fetch('php/processar_chat.php', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message })
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ message: msg })
                 });
-                const data = await response.json();
-                chatWindow.removeChild(loadingDiv);
-
-                if (data.error) {
-                    appendMessage('system', 'Erro: ' + data.error);
+                const data = await res.json();
+                
+                document.getElementById(loadingId).remove();
+                
+                if(data.error) {
+                    addMessage("Erro: " + data.error, false);
                 } else {
-                    appendMessage('system', data.response);
+                    addMessage(data.response, false);
                 }
             } catch (err) {
-                chatWindow.removeChild(loadingDiv);
-                appendMessage('system', 'Erro crítico de conexão.');
+                document.getElementById(loadingId).remove();
+                addMessage("Erro de conexão. Tente novamente.", false);
             }
         };
     </script>
