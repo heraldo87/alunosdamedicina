@@ -1,7 +1,7 @@
 <?php
 /**
- * MEDINFOCUS - Dashboard Principal
- * Interface inspirada em sistemas operativos (App-Style)
+ * MEDINFOCUS - Dashboard Principal (Refatorada v2.2)
+ * Interface App-Style com foco em ferramentas acadêmicas.
  */
 
 session_start();
@@ -12,9 +12,8 @@ if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
     exit;
 }
 
-// 2. DADOS DO UTILIZADOR
+// 2. DADOS DO UTILIZADOR (Sincronizados com o novo padrão numérico)
 $nomeUsuario = $_SESSION['user_name'] ?? 'Doutor(a)';
-$tipoUsuario = $_SESSION['user_type'] ?? 'aluno'; // admin, representante, aluno
 $primeiroNome = explode(' ', $nomeUsuario)[0];
 ?>
 <!DOCTYPE html>
@@ -129,18 +128,6 @@ $primeiroNome = explode(' ', $nomeUsuario)[0];
                         <span class="text-[10px] text-slate-500 font-bold mt-1 block uppercase">Datas e Provas</span>
                     </div>
                 </a>
-
-                <?php if ($tipoUsuario === 'admin' || $tipoUsuario === 'representante'): ?>
-                <a href="aprovacoes.php" class="app-card group border border-slate-800/50 rounded-[3rem] p-8 flex flex-col items-center text-center gap-5 shadow-2xl hover:border-indigo-500/50">
-                    <div class="w-20 h-20 bg-indigo-500/10 rounded-3xl flex items-center justify-center text-indigo-400 group-hover:bg-indigo-500 group-hover:text-white transition-all duration-500 shadow-lg shadow-indigo-500/10">
-                        <i class="fa-solid fa-user-gear text-4xl"></i>
-                    </div>
-                    <div>
-                        <span class="block text-sm font-black text-white uppercase tracking-[0.15em]">Gestão</span>
-                        <span class="text-[10px] text-indigo-400 font-bold mt-1 block italic uppercase tracking-tighter">Acessos Pendentes</span>
-                    </div>
-                </a>
-                <?php endif; ?>
 
             </div>
         </div>

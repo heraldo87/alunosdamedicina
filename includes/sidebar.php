@@ -1,34 +1,41 @@
 <?php
-// includes/sidebar.php
+/**
+ * MEDINFOCUS - Sidebar Refatorada (Versão 2.1)
+ * Coordenador: Projeto MedInFocus
+ * * Atualizações:
+ * 1. Sincronização com Níveis Numéricos (1: Aluno, 2: Representante, 3: Admin).
+ * 2. Rota de Logout corrigida para php/logout.php.
+ * 3. Sanitização de exibição de nome (XSS Protection).
+ */
 
-// 1. Configurações de Perfil e Lógica de Negócio
-$tipoUsuario = $_SESSION['user_type'] ?? 'aluno'; 
+// 1. Configurações de Perfil e Lógica de Sessão
+$nivelAcesso = $_SESSION['user_level'] ?? 1; 
 $nomeUsuario = $_SESSION['user_name'] ?? 'Usuário';
 
-// Cores e Rótulos por Perfil
+// Mapeamento de Cores e Rótulos por Nível (Consistente com Perfil e Login)
 $perfisConfig = [
-    'admin' => [
+    3 => [
         'label' => 'Administrador',
         'color' => 'bg-red-600',
         'icon' => 'fa-shield-medical'
     ],
-    'representante' => [
+    2 => [
         'label' => 'Representante',
         'color' => 'bg-amber-600',
         'icon' => 'fa-user-graduate'
     ],
-    'aluno' => [
+    1 => [
         'label' => 'Acadêmico',
         'color' => 'bg-brand-primary',
         'icon' => 'fa-user-md'
     ]
 ];
 
-$config = $perfisConfig[$tipoUsuario] ?? $perfisConfig['aluno'];
+$config = $perfisConfig[$nivelAcesso] ?? $perfisConfig[1];
 
-// Simulação de Contadores (Em produção, viriam de consultas SQL)
+// Simulação de Contadores (Dinamizar futuramente com SQL na Dashboard)
 $avisosNaoLidos = 2;
-$pendenciasCount = ($tipoUsuario !== 'aluno') ? 12 : 3; // Aluno vê tarefas, Rep vê aprovações
+$liberacoesPendentes = ($nivelAcesso >= 2) ? 5 : 0; 
 ?>
 
 <aside class="hidden md:flex flex-col w-72 bg-brand-dark text-white border-r border-slate-800 h-screen sticky top-0 overflow-hidden">
@@ -52,7 +59,7 @@ $pendenciasCount = ($tipoUsuario !== 'aluno') ? 12 : 3; // Aluno vê tarefas, Re
             <div class="space-y-1">
                 <a href="perfil.php" class="flex items-center px-3 py-2.5 text-sm font-medium rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all group">
                     <div class="w-8 h-8 rounded-full <?php echo $config['color']; ?> flex items-center justify-center mr-3 text-[10px] font-bold border border-white/10 group-hover:scale-110 transition-transform">
-                        <?php echo strtoupper(substr($nomeUsuario, 0, 2)); ?>
+                        <?php echo strtoupper(substr(htmlspecialchars($nomeUsuario), 0, 2)); ?>
                     </div>
                     <span>Meu Perfil</span>
                     <i class="fa-solid fa-circle-user ml-auto opacity-0 group-hover:opacity-100 transition-opacity text-brand-primary"></i>
@@ -68,16 +75,6 @@ $pendenciasCount = ($tipoUsuario !== 'aluno') ? 12 : 3; // Aluno vê tarefas, Re
                     <span>Avisos</span>
                     <?php if($avisosNaoLidos > 0): ?>
                         <span class="ml-auto w-5 h-5 flex items-center justify-center bg-blue-600 text-[10px] font-bold rounded-full text-white ring-4 ring-brand-dark"><?php echo $avisosNaoLidos; ?></span>
-                    <?php endif; ?>
-                </a>
-
-                <a href="pendencias.php" class="flex items-center px-3 py-2.5 text-sm font-medium rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all group">
-                    <i class="fa-solid fa-circle-exclamation w-8 text-center mr-2 text-lg group-hover:text-rose-500"></i>
-                    <span>Pendências</span>
-                    <?php if($pendenciasCount > 0): ?>
-                        <span class="ml-auto px-2 py-0.5 bg-rose-500/10 text-rose-500 text-[10px] font-bold rounded-lg border border-rose-500/20">
-                            <?php echo $pendenciasCount; ?>
-                        </span>
                     <?php endif; ?>
                 </a>
             </div>
@@ -97,18 +94,26 @@ $pendenciasCount = ($tipoUsuario !== 'aluno') ? 12 : 3; // Aluno vê tarefas, Re
             </div>
         </div>
 
-        <?php if ($tipoUsuario === 'representante' || $tipoUsuario === 'admin'): ?>
+        <?php if ($nivelAcesso >= 2): ?>
         <div>
-            <p class="px-3 text-[10px] font-black text-amber-500 uppercase tracking-widest mb-4 italic">Gestão de Turma</p>
+            <p class="px-3 text-[10px] font-black text-amber-500 uppercase tracking-widest mb-4 italic">Administração de Sistema</p>
             <div class="space-y-1">
                 <a href="gestao_usuarios.php" class="flex items-center px-3 py-2.5 text-sm font-medium rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all group">
-                    <i class="fa-solid fa-users-gear w-8 text-center mr-2 text-lg group-hover:text-amber-500"></i>
-                    <span>Validar Alunos</span>
+                    <i class="fa-solid fa-user-check w-8 text-center mr-2 text-lg group-hover:text-emerald-500"></i>
+                    <span>Liberações</span>
+                    <?php if($liberacoesPendentes > 0): ?>
+                        <span class="ml-auto px-2 py-0.5 bg-emerald-500/10 text-emerald-400 text-[10px] font-bold rounded-lg border border-emerald-500/20">
+                            <?php echo $liberacoesPendentes; ?>
+                        </span>
+                    <?php endif; ?>
                 </a>
+
+                <?php if ($nivelAcesso === 3): ?>
                 <a href="config_pastas.php" class="flex items-center px-3 py-2.5 text-sm font-medium rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all group">
                     <i class="fa-solid fa-sliders w-8 text-center mr-2 text-lg group-hover:text-amber-500"></i>
                     <span>Configurar Pastas</span>
                 </a>
+                <?php endif; ?>
             </div>
         </div>
         <?php endif; ?>
@@ -118,8 +123,9 @@ $pendenciasCount = ($tipoUsuario !== 'aluno') ? 12 : 3; // Aluno vê tarefas, Re
     <div class="p-4 mt-auto border-t border-slate-800/50 bg-slate-900/30">
         <div class="flex items-center gap-3 px-2 mb-4">
             <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Sincronizado com o Servidor</span>
+            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Sincronizado com Servidor</span>
         </div>
+        
         <a href="php/logout.php" class="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-xs font-bold text-slate-500 hover:text-rose-500 hover:bg-rose-500/10 transition-all group">
             <i class="fa-solid fa-power-off group-hover:rotate-90 transition-transform"></i>
             Encerrar Sessão
