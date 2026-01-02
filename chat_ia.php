@@ -2,7 +2,7 @@
 session_start();
 require_once 'php/config.php'; 
 
-if (!isset($_SESSION['user_id'])) {
+if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
     header("Location: login.php");
     exit;
 }
@@ -60,22 +60,22 @@ $nomeUsuario = $_SESSION['user_name'] ?? 'Acadêmico';
                     Mentor <span class="text-brand-primary">IA</span>
                 </h1>
                 <p class="text-slate-400 mt-3 max-w-2xl text-lg font-medium">
-                    Bem-vindo, <?php echo $nomeUsuario; ?>. Acesse nossa ferramenta de suporte à decisão clínica.
+                    Bem-vindo, <?php echo htmlspecialchars($nomeUsuario); ?>. Escolha como deseja interagir com a IA hoje.
                 </p>
             </header>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl">
                 
-                <a href="chat_texto.php" class="group relative overflow-hidden glass-card-dark rounded-[2.5rem] p-10 hover:border-brand-primary/40 transition-all duration-500">
+                <a href="mentor_texto.php" class="group relative overflow-hidden glass-card-dark rounded-[2.5rem] p-10 hover:border-brand-primary/40 transition-all duration-500">
                     <div class="absolute -right-20 -top-20 w-64 h-64 bg-brand-primary/5 rounded-full blur-3xl group-hover:bg-brand-primary/10 transition-colors"></div>
                     
                     <div class="relative z-10">
                         <div class="w-16 h-16 bg-brand-primary/10 rounded-2xl flex items-center justify-center text-brand-primary mb-8 group-hover:scale-110 group-hover:bg-brand-primary group-hover:text-white transition-all duration-500 shadow-xl shadow-brand-primary/5">
-                            <i class="fa-solid fa-notes-medical text-3xl"></i>
+                            <i class="fa-solid fa-comments text-3xl"></i>
                         </div>
-                        <h3 class="text-2xl font-bold text-white mb-4">Chat de Dúvida Médica</h3>
+                        <h3 class="text-2xl font-bold text-white mb-4">Mentor por Chat</h3>
                         <p class="text-slate-400 text-base leading-relaxed mb-8">
-                            Análise textual detalhada. Envie casos clínicos, exames laboratoriais ou peça sugestões de conduta e dosagens terapêuticas.
+                            Envie dúvidas escritas, cole casos clínicos e peça resumos detalhados. Ideal para revisões aprofundadas e listas.
                         </p>
                         <div class="flex items-center text-brand-primary font-black text-xs uppercase tracking-widest">
                             Iniciar Texto <i class="fa-solid fa-chevron-right ml-2 group-hover:translate-x-2 transition-transform"></i>
@@ -83,12 +83,26 @@ $nomeUsuario = $_SESSION['user_name'] ?? 'Acadêmico';
                     </div>
                 </a>
 
-                <div class="hidden md:flex flex-col justify-center items-center border-2 border-dashed border-slate-800 rounded-[2.5rem] p-10 opacity-50 select-none">
-                    <div class="w-16 h-16 bg-slate-800 rounded-2xl flex items-center justify-center text-slate-600 mb-4">
-                        <i class="fa-solid fa-hammer text-2xl"></i>
+                <a href="mentor_voz.php" class="group relative overflow-hidden glass-card-dark rounded-[2.5rem] p-10 hover:border-rose-500/40 transition-all duration-500">
+                    <div class="absolute -right-20 -top-20 w-64 h-64 bg-rose-500/5 rounded-full blur-3xl group-hover:bg-rose-500/10 transition-colors"></div>
+                    
+                    <div class="absolute top-10 right-10">
+                        <span class="bg-rose-500 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest animate-pulse shadow-lg shadow-rose-500/20">LIVE</span>
                     </div>
-                    <p class="text-slate-500 font-bold text-sm uppercase tracking-wider">Módulos em Desenvolvimento</p>
-                </div>
+
+                    <div class="relative z-10">
+                        <div class="w-16 h-16 bg-rose-500/10 rounded-2xl flex items-center justify-center text-rose-500 mb-8 group-hover:scale-110 group-hover:bg-rose-500 group-hover:text-white transition-all duration-500 shadow-xl shadow-rose-500/5">
+                            <i class="fa-solid fa-microphone-lines text-3xl"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold text-white mb-4">Mentor por Voz</h3>
+                        <p class="text-slate-400 text-base leading-relaxed mb-8">
+                            Converse em tempo real. Discuta casos clínicos falando naturalmente, com latência zero, como em uma chamada.
+                        </p>
+                        <div class="flex items-center text-rose-500 font-black text-xs uppercase tracking-widest">
+                            Falar Agora <i class="fa-solid fa-chevron-right ml-2 group-hover:translate-x-2 transition-transform"></i>
+                        </div>
+                    </div>
+                </a>
 
             </div>
 
