@@ -1,18 +1,18 @@
 <?php
 /**
- * MEDINFOCUS - Sidebar Refatorada (Versão 2.1)
+ * MEDINFOCUS - Sidebar Refatorada (Versão 2.2)
  * Coordenador: Projeto MedInFocus
  * * Atualizações:
- * 1. Sincronização com Níveis Numéricos (1: Aluno, 2: Representante, 3: Admin).
- * 2. Rota de Logout corrigida para php/logout.php.
- * 3. Sanitização de exibição de nome (XSS Protection).
+ * 1. Adicionado botão para Página Principal.
+ * 2. Removida opção de Configurar Pastas.
+ * 3. Mantida lógica de níveis (1: Aluno, 2: Rep, 3: Admin).
  */
 
 // 1. Configurações de Perfil e Lógica de Sessão
 $nivelAcesso = $_SESSION['user_level'] ?? 1; 
 $nomeUsuario = $_SESSION['user_name'] ?? 'Usuário';
 
-// Mapeamento de Cores e Rótulos por Nível (Consistente com Perfil e Login)
+// Mapeamento de Cores e Rótulos por Nível
 $perfisConfig = [
     3 => [
         'label' => 'Administrador',
@@ -33,7 +33,7 @@ $perfisConfig = [
 
 $config = $perfisConfig[$nivelAcesso] ?? $perfisConfig[1];
 
-// Simulação de Contadores (Dinamizar futuramente com SQL na Dashboard)
+// Simulação de Contadores
 $avisosNaoLidos = 2;
 $liberacoesPendentes = ($nivelAcesso >= 2) ? 5 : 0; 
 ?>
@@ -57,6 +57,11 @@ $liberacoesPendentes = ($nivelAcesso >= 2) ? 5 : 0;
         <div>
             <p class="px-3 text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Minha Conta</p>
             <div class="space-y-1">
+                <a href="index.php" class="flex items-center px-3 py-2.5 text-sm font-medium rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all group">
+                    <i class="fa-solid fa-house w-8 text-center mr-2 text-lg group-hover:text-brand-primary"></i>
+                    <span>Página Principal</span>
+                </a>
+
                 <a href="perfil.php" class="flex items-center px-3 py-2.5 text-sm font-medium rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all group">
                     <div class="w-8 h-8 rounded-full <?php echo $config['color']; ?> flex items-center justify-center mr-3 text-[10px] font-bold border border-white/10 group-hover:scale-110 transition-transform">
                         <?php echo strtoupper(substr(htmlspecialchars($nomeUsuario), 0, 2)); ?>
@@ -107,14 +112,8 @@ $liberacoesPendentes = ($nivelAcesso >= 2) ? 5 : 0;
                         </span>
                     <?php endif; ?>
                 </a>
-
-                <?php if ($nivelAcesso === 3): ?>
-                <a href="config_pastas.php" class="flex items-center px-3 py-2.5 text-sm font-medium rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all group">
-                    <i class="fa-solid fa-sliders w-8 text-center mr-2 text-lg group-hover:text-amber-500"></i>
-                    <span>Configurar Pastas</span>
-                </a>
-                <?php endif; ?>
-            </div>
+                
+                </div>
         </div>
         <?php endif; ?>
 
