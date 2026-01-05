@@ -27,7 +27,7 @@ try {
 
     // --- CONFIGURAÇÃO cURL ---
     // URL do seu Webhook n8n
-    $n8nWebhookUrl = 'https://n8n.alunosdamedicina.com/webhook-test/04d5dbcf-106b-416e-b8da-4f9b346290cc'; 
+    $n8nWebhookUrl = 'https://n8n.alunosdamedicina.com/webhook/cfd82197-1046-4713-bfb8-c2113b0d7965'; 
     
     $payload = [
         'user_id' => $_SESSION['user_id'],
