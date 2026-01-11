@@ -1,7 +1,7 @@
 <?php
 /**
  * MEDINFOCUS - Visualizador de Workspace (Modo Ícones Inteligentes)
- * Funcionalidade: Exibe arquivos com ícones baseados no formato real e permite Upload dos dados
+ * Funcionalidade: Exibe arquivos do Drive/N8N e permite ações de CRUD
  */
 
 session_start();
@@ -16,7 +16,7 @@ if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
 $folderName = $_GET['name'] ?? 'Workspace'; 
 $folderId   = $_GET['id'] ?? ''; 
 
-// 3. COMUNICAÇÃO COM N8N
+// 3. COMUNICAÇÃO COM N8N (LISTAGEM)
 $webhookUrl = 'https://n8n.alunosdamedicina.com/webhook/37c97a47-aef8-4689-976d-0c3f6acc5cc4';
 
 $files = [];
@@ -57,7 +57,6 @@ try {
     if ($httpCode >= 200 && $httpCode < 300) {
         $decoded = json_decode($response, true);
         
-        // Tenta encontrar a lista de arquivos em diferentes formatos de resposta
         if (isset($decoded['files'])) {
             $files = $decoded['files'];
         } elseif (isset($decoded[0]['files'])) {
@@ -104,6 +103,7 @@ function getFileIconClass($file) {
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
         tailwind.config = {
@@ -126,7 +126,6 @@ function getFileIconClass($file) {
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
         
-        /* Efeito de Vidro nos Cards */
         .file-card {
             background: rgba(30, 41, 59, 0.4);
             backdrop-filter: blur(12px);
@@ -140,7 +139,6 @@ function getFileIconClass($file) {
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
         }
         
-        /* Animação de Entrada Suave */
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
     </style>
@@ -167,7 +165,7 @@ function getFileIconClass($file) {
                 
                 <div class="flex items-center gap-3">
                     <div class="hidden md:block text-[10px] font-mono text-slate-600 px-2 py-1 rounded bg-slate-900 border border-slate-800">
-                        SYNC: ON
+                        SYNC: N8N DRIVE
                     </div>
 
                     <?php if (!empty($files)): ?>
@@ -211,39 +209,39 @@ function getFileIconClass($file) {
             <?php endif; ?>
 
             <?php if (!empty($files)): ?>
-                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6">
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6" id="filesGrid">
                     <?php foreach ($files as $index => $file): ?>
                         
-                        <div class="file-card group relative rounded-3xl p-5 flex flex-col items-center text-center cursor-pointer animate-enter" 
-                             style="animation-delay: <?php echo $index * 50; ?>ms;"
-                             onclick="window.open('<?php echo $file['webViewLink'] ?? $file['url'] ?? '#'; ?>', '_blank')">
+                        <div id="file-card-<?php echo $file['id'] ?? 'uniq_'.uniqid(); ?>" class="file-card group relative rounded-3xl p-4 flex flex-col items-center text-center animate-enter" 
+                             style="animation-delay: <?php echo $index * 50; ?>ms;">
                             
-                            <div class="w-16 h-16 mb-4 flex items-center justify-center transition-transform group-hover:scale-110 duration-300">
+                            <a href="<?php echo $file['webViewLink'] ?? $file['url'] ?? '#'; ?>" target="_blank" 
+                               class="w-16 h-16 mb-3 flex items-center justify-center transition-transform group-hover:scale-110 duration-300 cursor-pointer">
                                 <i class="<?php echo getFileIconClass($file); ?> text-5xl drop-shadow-2xl"></i>
-                            </div>
+                            </a>
 
-                            <h4 class="text-sm font-medium text-slate-200 group-hover:text-brand-primary transition-colors line-clamp-2 w-full leading-snug mb-2" title="<?php echo htmlspecialchars($file['name']); ?>">
-                                <?php echo htmlspecialchars($file['name']); ?>
+                            <h4 class="text-sm font-medium text-slate-200 group-hover:text-brand-primary transition-colors line-clamp-2 w-full leading-snug mb-3 min-h-[2.5rem]" title="<?php echo htmlspecialchars($file['name'] ?? 'Sem Nome'); ?>">
+                                <?php echo htmlspecialchars($file['name'] ?? 'Sem Nome'); ?>
                             </h4>
 
-                            <div class="mt-auto pt-2 w-full border-t border-white/5 flex justify-between items-center text-[10px] text-slate-500 font-mono">
-                                <span class="uppercase">
-                                    <?php 
-                                        echo strtoupper(pathinfo($file['name'], PATHINFO_EXTENSION)) ?: 'FILE'; 
-                                    ?>
-                                </span>
-                                <span>
-                                    <?php 
-                                        $size = $file['size'] ?? 0;
-                                        echo ($size > 1024*1024) ? round($size / 1024 / 1024, 1) . 'MB' : round($size / 1024, 0) . 'KB'; 
-                                    ?>
-                                </span>
-                            </div>
+                            <div class="mt-auto pt-3 w-full border-t border-white/5 flex justify-between items-center px-1">
+                                
+                                <a href="api/baixar_ws.php?file_id=<?php echo $file['id'] ?? ''; ?>&name=<?php echo urlencode($file['name'] ?? 'arquivo'); ?>&mime=<?php echo urlencode($file['mimeType'] ?? ''); ?>" 
+                                   target="_blank"
+                                   class="text-slate-500 hover:text-emerald-400 hover:bg-emerald-400/10 p-2 rounded-lg transition-all"
+                                   title="Baixar Arquivo">
+                                    <i class="fa-solid fa-download"></i>
+                                </a>
 
-                            <div class="absolute inset-0 bg-slate-900/80 backdrop-blur-[2px] rounded-3xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                <span class="px-4 py-2 bg-brand-primary text-white text-xs font-bold rounded-xl shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
-                                    <i class="fa-solid fa-up-right-from-square mr-1"></i> Abrir
+                                <span class="text-[9px] font-mono text-slate-600 uppercase">
+                                    <?php echo strtoupper(pathinfo($file['name'] ?? 'file', PATHINFO_EXTENSION)); ?>
                                 </span>
+
+                                <button onclick="deletarArquivo('<?php echo $file['id'] ?? ''; ?>', '<?php echo addslashes($file['name'] ?? 'Arquivo'); ?>')" 
+                                        class="text-slate-500 hover:text-rose-500 hover:bg-rose-500/10 p-2 rounded-lg transition-all"
+                                        title="Deletar Arquivo">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
                             </div>
 
                         </div>
@@ -259,5 +257,87 @@ function getFileIconClass($file) {
 
         </div>
     </main>
+
+    <script>
+        function deletarArquivo(fileId, fileName) {
+            if (!fileId) {
+                Swal.fire('Erro', 'ID do arquivo inválido.', 'error');
+                return;
+            }
+
+            Swal.fire({
+                title: 'Tem certeza?',
+                text: `Você está prestes a deletar "${fileName}". Esta ação não pode ser desfeita.`,
+                icon: 'warning',
+                background: '#1e293b',
+                color: '#fff',
+                showCancelButton: true,
+                confirmButtonColor: '#e11d48',
+                cancelButtonColor: '#475569',
+                confirmButtonText: 'Sim, deletar!',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    
+                    // Mostra loading
+                    Swal.fire({
+                        title: 'Deletando...',
+                        text: 'Aguarde enquanto processamos no Drive.',
+                        background: '#1e293b',
+                        color: '#fff',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    // Chama API de Deleção
+                    fetch('api/deletar_ws.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            file_id: fileId,
+                            file_name: fileName
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Remove o card visualmente
+                            const card = document.getElementById('file-card-' + fileId);
+                            if (card) {
+                                card.classList.add('opacity-0', 'scale-90');
+                                setTimeout(() => card.remove(), 300);
+                            }
+                            
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Deletado!',
+                                text: 'O arquivo foi removido com sucesso.',
+                                background: '#1e293b',
+                                color: '#fff',
+                                timer: 1500,
+                                showConfirmButton: false
+                            });
+                        } else {
+                            throw new Error(data.message || 'Erro desconhecido');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Erro:', error);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Erro!',
+                            text: 'Não foi possível deletar: ' + error.message,
+                            background: '#1e293b',
+                            color: '#fff'
+                        });
+                    });
+                }
+            });
+        }
+    </script>
 </body>
 </html>
