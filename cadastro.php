@@ -1,11 +1,7 @@
 <?php
 /**
  * MEDINFOCUS - Sistema de Cadastro Refatorado
- * Coordenador: Projeto MedInFocus
- * * Melhorias aplicadas:
- * 1. Tratamento de erro no dropdown para evitar Warnings.
- * 2. Integração com a nova estrutura de Matrícula e Faculdade.
- * 3. Status inicial definido como Inativo (ativo = 0).
+ * Melhoria: Integração do campo Telefone/WhatsApp no processamento.
  */
 
 session_start();
@@ -22,10 +18,9 @@ $erroCadastro = false;
 $sucessoCadastro = false;
 $msg = '';
 
-// 2. BUSCA DE UNIVERSIDADES (Blindada contra Warnings)
+// 2. BUSCA DE UNIVERSIDADES
 $universidades = []; 
 try {
-    // A variável $pdo vem do config.php
     if (isset($pdo)) {
         $stmtUni = $pdo->query("SELECT id, nome, sigla FROM universidades ORDER BY nome ASC");
         if ($stmtUni) {
@@ -33,7 +28,6 @@ try {
         }
     }
 } catch (PDOException $e) {
-    // Se a tabela não existir ainda ou houver erro, o array continua vazio e não gera Warning no HTML
     $universidades = []; 
 }
 
@@ -43,15 +37,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Sanitização de entradas
     $nome = isset($_POST['nome']) ? strip_tags(trim($_POST['nome'])) : '';
     $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
+    // Limpa o telefone para garantir apenas números inteiros
+    $telefone = isset($_POST['telefone']) ? preg_replace('/[^0-9]/', '', $_POST['telefone']) : '';
     $matricula = isset($_POST['matricula']) ? strip_tags(trim($_POST['matricula'])) : '';
     $faculdade_id = filter_input(INPUT_POST, 'faculdade', FILTER_VALIDATE_INT);
     $senha = $_POST['password'] ?? '';
     $confirmaSenha = $_POST['confirm_password'] ?? '';
 
-    // Validações de Negócio
-    if (empty($nome) || empty($email) || empty($senha) || empty($matricula) || !$faculdade_id) {
+    // Validações de Negócio (incluindo telefone)
+    if (empty($nome) || empty($email) || empty($telefone) || empty($senha) || empty($matricula) || !$faculdade_id) {
         $erroCadastro = true;
-        $msg = 'Por favor, preencha todos os campos obrigatórios.';
+        $msg = 'Por favor, preencha todos os campos obrigatórios, incluindo o WhatsApp.';
     } elseif ($senha !== $confirmaSenha) {
         $erroCadastro = true;
         $msg = 'As senhas digitadas não coincidem.';
@@ -71,15 +67,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Criptografia da senha
                 $senhaHash = password_hash($senha, PASSWORD_DEFAULT);
 
-                // Inserção na nova estrutura (ativo=0 garante que precisa de liberação)
-                $sql = "INSERT INTO usuarios (nome, email, senha_hash, matricula, faculdade_id, nivel_acesso, ativo, data_criacao) 
-                        VALUES (:nome, :email, :senha, :matricula, :faculdade, 1, 0, NOW())";
+                // Inserção com o novo campo 'telefone'
+                $sql = "INSERT INTO usuarios (nome, email, telefone, senha_hash, matricula, faculdade_id, nivel_acesso, ativo, data_criacao) 
+                        VALUES (:nome, :email, :telefone, :senha_hash, :matricula, :faculdade, 1, 0, NOW())";
                 
                 $stmtInsert = $pdo->prepare($sql);
                 $foiInserido = $stmtInsert->execute([
                     ':nome' => $nome,
                     ':email' => $email,
-                    ':senha' => $senhaHash,
+                    ':telefone' => $telefone,
+                    ':senha_hash' => $senhaHash,
                     ':matricula' => $matricula,
                     ':faculdade' => $faculdade_id
                 ]);
@@ -87,7 +84,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($foiInserido) {
                     $sucessoCadastro = true;
                     $msg = 'Cadastro realizado com sucesso! Aguarde a liberação do seu representante.';
-                    // Redirecionamento amigável
                     header("refresh:4;url=login.php"); 
                 } else {
                     $erroCadastro = true;
@@ -96,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         } catch (PDOException $e) {
             $erroCadastro = true;
-            $msg = 'Erro de conexão: Certifique-se que o banco de dados foi atualizado.';
+            $msg = 'Erro de conexão: Certifique-se que o campo "telefone" foi criado na tabela "usuarios".';
         }
     }
 }
@@ -199,6 +195,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-primary outline-none transition-all" 
                             placeholder="exemplo@email.com"
                             value="<?php echo htmlspecialchars($email ?? ''); ?>">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">WhatsApp (DDD + Número)</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fa-brands fa-whatsapp text-emerald-500 font-bold"></i>
+                            </div>
+                            <input type="tel" name="telefone" required 
+                                class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-primary outline-none transition-all" 
+                                placeholder="Ex: 21999998888"
+                                value="<?php echo htmlspecialchars($telefone ?? ''); ?>"
+                                oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                        </div>
+                        <p class="text-[10px] text-slate-400 mt-1">Apenas números. Campo obrigatório para validação do acesso.</p>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -166,12 +166,12 @@ try {
                     </div>
                 </a>
 
-                <a href="agenda.php" class="app-card group rounded-[2.5rem] p-6 flex flex-col items-center text-center gap-4 relative overflow-hidden" style="--hover-color: rgba(244, 63, 94, 0.5)">
+                <a href="calendario.php" class="app-card group rounded-[2.5rem] p-6 flex flex-col items-center text-center gap-4 relative overflow-hidden" style="--hover-color: rgba(244, 63, 94, 0.5)">
                     <div class="w-16 h-16 bg-rose-500/10 rounded-2xl flex items-center justify-center text-rose-500 group-hover:bg-rose-500 group-hover:text-white transition-all duration-500">
                         <i class="fa-solid fa-calendar-check text-3xl"></i>
                     </div>
                     <div class="relative z-10">
-                        <span class="block text-sm font-black text-white uppercase tracking-wider">Agenda</span>
+                        <span class="block text-sm font-black text-white uppercase tracking-wider">calendário</span>
                         <?php if ($dataEvento): ?>
                             <span class="text-[10px] text-rose-400 font-bold mt-1 block truncate max-w-[120px]">
                                 <?php echo htmlspecialchars($dataEvento); ?>
@@ -200,16 +200,6 @@ try {
                         <?php echo $qtdAvisos; ?>
                     </div>
                     <?php endif; ?>
-                </a>
-
-                <a href="simulados.php" class="app-card group rounded-[2.5rem] p-6 flex flex-col items-center text-center gap-4" style="--hover-color: rgba(16, 185, 129, 0.5)">
-                    <div class="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-500 group-hover:bg-emerald-500 group-hover:text-white transition-all duration-500">
-                        <i class="fa-solid fa-notes-medical text-3xl"></i>
-                    </div>
-                    <div>
-                        <span class="block text-sm font-black text-white uppercase tracking-wider">Simulados</span>
-                        <span class="text-[10px] text-slate-500 font-bold mt-1 block">Treino Clínico</span>
-                    </div>
                 </a>
 
                 <?php if ($tipoUsuario === 'admin' || $tipoUsuario === 'representante'): ?>
