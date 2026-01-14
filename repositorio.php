@@ -123,15 +123,17 @@ if ($httpCode >= 200 && $httpCode < 300 && $response) {
     <main class="flex-1 flex flex-col min-w-0 overflow-y-auto custom-scrollbar relative">
         
         <?php if(empty($workspaces)): ?>
-            <div class="bg-red-900/50 p-4 m-4 rounded border border-red-500 text-xs font-mono text-white">
-                <strong>DEBUG MODE:</strong><br>
-                HTTP Code: <?php echo $debugInfo['http_code']; ?><br>
-                Curl Error: <?php echo $debugInfo['curl_error'] ?: 'Nenhum'; ?><br>
-                JSON Error: <?php echo $debugInfo['json_error'] ?? 'Nenhum'; ?><br>
-                <hr class="my-2 border-red-500/30">
-                <strong>Resposta Crua:</strong><br>
-                <?php var_dump($debugInfo['raw_response']); ?>
-            </div>
+            <?php if(!empty($debugInfo['raw_response']) || $debugInfo['http_code'] != 200): ?>
+                <div class="bg-red-900/50 p-4 m-4 rounded border border-red-500 text-xs font-mono text-white">
+                    <strong>DEBUG MODE:</strong><br>
+                    HTTP Code: <?php echo $debugInfo['http_code']; ?><br>
+                    Curl Error: <?php echo $debugInfo['curl_error'] ?: 'Nenhum'; ?><br>
+                    JSON Error: <?php echo $debugInfo['json_error'] ?? 'Nenhum'; ?><br>
+                    <hr class="my-2 border-red-500/30">
+                    <strong>Resposta Crua:</strong><br>
+                    <?php var_dump($debugInfo['raw_response']); ?>
+                </div>
+            <?php endif; ?>
         <?php endif; ?>
 
         <header class="pt-12 pb-8 px-6 md:px-12 flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -174,9 +176,17 @@ if ($httpCode >= 200 && $httpCode < 300 && $response) {
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     <?php foreach ($workspaces as $ws): ?>
                         
-                        <a href="abrir_workspace.php?id=<?php echo $ws['id']; ?>" class="workspace-card group p-6 rounded-2xl border border-slate-800/50 flex flex-col justify-between h-48 relative overflow-hidden">
+                        <div class="workspace-card group p-6 rounded-2xl border border-slate-800/50 flex flex-col justify-between h-48 relative overflow-hidden">
                             
-                            <div class="flex justify-between items-start z-10 relative">
+                            <button onclick="deletarWorkspace(event, '<?php echo $ws['id']; ?>', '<?php echo htmlspecialchars($ws['nome'] ?? 'Workspace'); ?>')" 
+                                    class="absolute top-4 right-4 z-30 w-8 h-8 flex items-center justify-center rounded-full bg-slate-800/80 text-slate-400 hover:bg-red-500/20 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 duration-200 border border-transparent hover:border-red-500/30"
+                                    title="Excluir Workspace">
+                                <i class="fa-solid fa-trash-can text-sm"></i>
+                            </button>
+
+                            <a href="abrir_workspace.php?id=<?php echo $ws['id']; ?>" class="absolute inset-0 z-20 cursor-pointer"></a>
+
+                            <div class="flex justify-between items-start z-10 relative pointer-events-none">
                                 <div class="w-12 h-12 bg-gradient-to-br from-brand-primary to-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-brand-primary/20 group-hover:scale-110 transition-transform">
                                     <i class="fa-solid fa-box-archive"></i>
                                 </div>
@@ -189,13 +199,13 @@ if ($httpCode >= 200 && $httpCode < 300 && $response) {
                                         default => 'bg-slate-700/50 text-slate-400 border-slate-600/50'
                                     };
                                 ?>
-                                <span class="px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border <?php echo $badgeClass; ?>">
+                                <span class="mr-6 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border <?php echo $badgeClass; ?>">
                                     <?php echo ucfirst($nivel); ?>
                                 </span>
                             </div>
                             
-                            <div class="z-10 relative mt-4">
-                                <h3 class="text-white font-bold text-lg leading-tight mb-1 truncate">
+                            <div class="z-10 relative mt-4 pointer-events-none">
+                                <h3 class="text-white font-bold text-lg leading-tight mb-1 truncate pr-2">
                                     <?php echo htmlspecialchars($ws['nome'] ?? 'Sem Nome'); ?>
                                 </h3>
                                 
@@ -210,7 +220,7 @@ if ($httpCode >= 200 && $httpCode < 300 && $response) {
                                 </div>
                             </div>
 
-                            <div class="pt-4 mt-auto border-t border-white/5 flex items-center justify-between text-xs text-slate-400 z-10 relative">
+                            <div class="pt-4 mt-auto border-t border-white/5 flex items-center justify-between text-xs text-slate-400 z-10 relative pointer-events-none">
                                 <span>
                                     <i class="fa-regular fa-clock mr-1"></i> 
                                     <?php echo isset($ws['created_at']) ? date('d/m/Y', strtotime($ws['created_at'])) : '-'; ?>
@@ -218,10 +228,10 @@ if ($httpCode >= 200 && $httpCode < 300 && $response) {
                                 <i class="fa-solid fa-arrow-right -rotate-45 group-hover:rotate-0 group-hover:text-brand-primary transition-all duration-300"></i>
                             </div>
 
-                            <div class="absolute -bottom-4 -right-4 text-8xl text-white/5 rotate-12 group-hover:scale-110 transition-transform duration-500 pointer-events-none">
+                            <div class="absolute -bottom-4 -right-4 text-8xl text-white/5 rotate-12 group-hover:scale-110 transition-transform duration-500 pointer-events-none z-0">
                                 <i class="fa-solid fa-folder"></i>
                             </div>
-                        </a>
+                        </div>
                     <?php endforeach; ?>
                 </div>
             <?php endif; ?>
@@ -258,6 +268,7 @@ if ($httpCode >= 200 && $httpCode < 300 && $response) {
     </div>
 
     <script>
+        // Lógica do Modal de Criação
         function toggleModal(modalID) {
             const modal = document.getElementById(modalID);
             const container = modal.querySelector('.modal-container');
@@ -274,6 +285,7 @@ if ($httpCode >= 200 && $httpCode < 300 && $response) {
         }
         document.onkeydown = function(evt) { if (evt.keyCode == 27) toggleModal('modal-create-ws'); };
 
+        // Processo de Criação
         document.getElementById('formCreateWS').addEventListener('submit', function(e) {
             e.preventDefault();
             const btn = document.getElementById('btnSubmit');
@@ -296,6 +308,70 @@ if ($httpCode >= 200 && $httpCode < 300 && $response) {
             .catch(error => Swal.fire({ icon: 'error', title: 'Ops!', text: error.message, background: '#1e293b', color: '#fff' }))
             .finally(() => { btn.innerHTML = originalText; btn.disabled = false; });
         });
+
+        // --- NOVA FUNÇÃO DE DELETAR ---
+        function deletarWorkspace(event, id, nome) {
+            // Previne que o card seja aberto (clique no link)
+            event.stopPropagation();
+            event.preventDefault();
+
+            Swal.fire({
+                title: 'Excluir Workspace?',
+                text: `Tem certeza que deseja apagar "${nome}"?`,
+                icon: 'warning',
+                background: '#1e293b',
+                color: '#fff',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#334155',
+                confirmButtonText: 'Sim, excluir',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    
+                    Swal.fire({
+                        title: 'Apagando...',
+                        text: 'Aguarde um momento.',
+                        allowOutsideClick: false,
+                        didOpen: () => { Swal.showLoading(); },
+                        background: '#1e293b',
+                        color: '#fff'
+                    });
+
+                    fetch('api/deletar_ws.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: 'id=' + encodeURIComponent(id)
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Excluído!',
+                                text: 'Workspace removido com sucesso.',
+                                background: '#1e293b',
+                                color: '#fff',
+                                confirmButtonColor: '#0284c7'
+                            }).then(() => {
+                                window.location.reload();
+                            });
+                        } else {
+                            throw new Error(data.message || 'Erro ao deletar.');
+                        }
+                    })
+                    .catch(error => {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Erro',
+                            text: error.message,
+                            background: '#1e293b',
+                            color: '#fff'
+                        });
+                    });
+                }
+            });
+        }
     </script>
 </body>
 </html>
