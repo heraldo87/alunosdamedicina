@@ -1,8 +1,8 @@
 <?php
 session_start();
-// Habilita erros para visualizarmos problemas de PHP
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
+// Configuração de erros (desative display_errors em produção)
+// error_reporting(E_ALL);
+// ini_set('display_errors', 1);
 
 require_once 'php/config.php';
 
@@ -13,65 +13,29 @@ if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
 }
 
 $userId = $_SESSION['user_id'] ?? 0;
+$drive_id = $_SESSION['drive_id'] ?? 0;
 $tipoUsuario = $_SESSION['user_type'] ?? 'aluno';
 
-// 2. BUSCAR DADOS NO N8N
+// 2. BUSCAR DADOS NO MYSQL (Refatorado para performance local)
 $workspaces = [];
-$debugInfo = []; // Variável para debug na tela
 
-$webhookListagem = 'https://n8n.alunosdamedicina.com/webhook/lista_ws';
-
-$payload = json_encode([
-    'action' => 'list_workspaces',
-    'user_id' => $userId, 
-    'user_type' => $tipoUsuario,
-    'request_time' => date('Y-m-d H:i:s')
-]);
-
-$ch = curl_init($webhookListagem);
-curl_setopt($ch, CURLOPT_POST, 1);
-curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
-curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_TIMEOUT, 15);
-// Ignorar SSL para garantir conexão
-curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-
-$response = curl_exec($ch);
-$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-$curlError = curl_error($ch);
-curl_close($ch);
-
-// Guardando info para Debug
-$debugInfo['http_code'] = $httpCode;
-$debugInfo['curl_error'] = $curlError;
-$debugInfo['raw_response'] = $response;
-
-// 3. PROCESSAMENTO DO JSON
-if ($httpCode >= 200 && $httpCode < 300 && $response) {
-    $json = json_decode($response, true);
+try {
+    // Busca apenas workspaces ativos (respeitando o soft delete)
+    // Ordena pelo mais recente
+    $sql = "SELECT * FROM workspaces 
+            WHERE status != 'inativo' 
+            ORDER BY created_at DESC";
+            
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute();
     
-    if (json_last_error() === JSON_ERROR_NONE) {
-        
-        // Lógica de Detecção Flexível
-        if (is_array($json)) {
-            // Caso 1: Array Direto (Seu caso: [ {...} ])
-            // Verifica se o primeiro item existe (índice 0)
-            if (isset($json[0])) {
-                $workspaces = $json;
-            }
-            // Caso 2: Envelopado em 'workspaces' ou 'data'
-            elseif (isset($json['workspaces'])) {
-                $workspaces = $json['workspaces'];
-            }
-            elseif (isset($json['data'])) {
-                $workspaces = $json['data'];
-            }
-        }
-    } else {
-        $debugInfo['json_error'] = json_last_error_msg();
+    if ($stmt->rowCount() > 0) {
+        $workspaces = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+} catch (PDOException $e) {
+    // Em caso de erro no banco, loga no servidor e mantêm a lista vazia
+    error_log("Erro ao buscar workspaces: " . $e->getMessage());
+    $workspaces = [];
 }
 ?>
 
@@ -122,20 +86,6 @@ if ($httpCode >= 200 && $httpCode < 300 && $response) {
 
     <main class="flex-1 flex flex-col min-w-0 overflow-y-auto custom-scrollbar relative">
         
-        <?php if(empty($workspaces)): ?>
-            <?php if(!empty($debugInfo['raw_response']) || $debugInfo['http_code'] != 200): ?>
-                <div class="bg-red-900/50 p-4 m-4 rounded border border-red-500 text-xs font-mono text-white">
-                    <strong>DEBUG MODE:</strong><br>
-                    HTTP Code: <?php echo $debugInfo['http_code']; ?><br>
-                    Curl Error: <?php echo $debugInfo['curl_error'] ?: 'Nenhum'; ?><br>
-                    JSON Error: <?php echo $debugInfo['json_error'] ?? 'Nenhum'; ?><br>
-                    <hr class="my-2 border-red-500/30">
-                    <strong>Resposta Crua:</strong><br>
-                    <?php var_dump($debugInfo['raw_response']); ?>
-                </div>
-            <?php endif; ?>
-        <?php endif; ?>
-
         <header class="pt-12 pb-8 px-6 md:px-12 flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div>
                 <h1 class="text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
@@ -162,14 +112,11 @@ if ($httpCode >= 200 && $httpCode < 300 && $response) {
                     </div>
                     <h3 class="text-xl font-bold text-white">Nenhum Workspace encontrado</h3>
                     <p class="text-slate-500 mt-2 text-center max-w-md">
-                        Não encontramos registros ativos para sua conta.<br>
-                        Se acabou de criar, aguarde alguns segundos e recarregue.
+                        Não encontramos registros ativos.<br>
+                        Utilize o botão acima para criar seu primeiro espaço.
                     </p>
-                    <button onclick="window.location.reload()" class="mt-4 text-brand-primary hover:text-white underline">
-                        Recarregar Página
-                    </button>
-                    <button onclick="toggleModal('modal-create-ws')" class="mt-2 bg-brand-primary px-4 py-2 rounded text-white font-bold">
-                        Criar Novo
+                    <button onclick="toggleModal('modal-create-ws')" class="mt-4 bg-brand-primary px-4 py-2 rounded text-white font-bold hover:bg-sky-500 transition-colors">
+                        Criar Agora
                     </button>
                 </div>
             <?php else: ?>
@@ -178,7 +125,7 @@ if ($httpCode >= 200 && $httpCode < 300 && $response) {
                         
                         <div class="workspace-card group p-6 rounded-2xl border border-slate-800/50 flex flex-col justify-between h-48 relative overflow-hidden">
                             
-                            <button onclick="deletarWorkspace(event, '<?php echo $ws['id']; ?>', '<?php echo htmlspecialchars($ws['nome'] ?? 'Workspace'); ?>')" 
+                            <button onclick="deletarWorkspace(event, '<?php echo $ws['id']; ?>', '<?php echo htmlspecialchars($ws['nome']); ?>')" 
                                     class="absolute top-4 right-4 z-30 w-8 h-8 flex items-center justify-center rounded-full bg-slate-800/80 text-slate-400 hover:bg-red-500/20 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 duration-200 border border-transparent hover:border-red-500/30"
                                     title="Excluir Workspace">
                                 <i class="fa-solid fa-trash-can text-sm"></i>
@@ -206,7 +153,7 @@ if ($httpCode >= 200 && $httpCode < 300 && $response) {
                             
                             <div class="z-10 relative mt-4 pointer-events-none">
                                 <h3 class="text-white font-bold text-lg leading-tight mb-1 truncate pr-2">
-                                    <?php echo htmlspecialchars($ws['nome'] ?? 'Sem Nome'); ?>
+                                    <?php echo htmlspecialchars($ws['nome']); ?>
                                 </h3>
                                 
                                 <div class="flex items-center gap-2 text-xs text-slate-500 font-medium">
@@ -257,7 +204,7 @@ if ($httpCode >= 200 && $httpCode < 300 && $response) {
                     </div>
                     <div class="bg-blue-500/10 p-4 rounded-xl flex gap-3 items-start">
                         <i class="fa-solid fa-circle-info text-brand-primary mt-1"></i>
-                        <p class="text-xs text-blue-200 leading-relaxed">Ao criar, um webhook será disparado para configurar a estrutura de pastas automaticamente.</p>
+                        <p class="text-xs text-blue-200 leading-relaxed">Este workspace será sincronizado com o Banco de Dados e o sistema de arquivos virtuais.</p>
                     </div>
                     <button type="submit" id="btnSubmit" class="w-full bg-brand-primary hover:bg-sky-500 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-brand-primary/20 transition-all transform active:scale-95 flex justify-center items-center gap-2">
                         <span>Criar Workspace</span> <i class="fa-solid fa-arrow-right"></i>
@@ -268,7 +215,7 @@ if ($httpCode >= 200 && $httpCode < 300 && $response) {
     </div>
 
     <script>
-        // Lógica do Modal de Criação
+        // Lógica do Modal
         function toggleModal(modalID) {
             const modal = document.getElementById(modalID);
             const container = modal.querySelector('.modal-container');
@@ -285,7 +232,7 @@ if ($httpCode >= 200 && $httpCode < 300 && $response) {
         }
         document.onkeydown = function(evt) { if (evt.keyCode == 27) toggleModal('modal-create-ws'); };
 
-        // Processo de Criação
+        // Processo de Criação (Chamando API local em vez do N8N direto)
         document.getElementById('formCreateWS').addEventListener('submit', function(e) {
             e.preventDefault();
             const btn = document.getElementById('btnSubmit');
@@ -294,6 +241,7 @@ if ($httpCode >= 200 && $httpCode < 300 && $response) {
             btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Criando...';
             btn.disabled = true;
 
+            // Importante: Certifique-se de que "api/cria_ws.php" existe
             fetch('api/cria_ws.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -302,42 +250,34 @@ if ($httpCode >= 200 && $httpCode < 300 && $response) {
             .then(response => response.json())
             .then(data => {
                 if(data.success) {
-                    Swal.fire({ icon: 'success', title: 'Sucesso!', text: 'Solicitação enviada.', background: '#1e293b', color: '#fff', confirmButtonColor: '#0284c7' }).then(() => window.location.reload());
+                    Swal.fire({ icon: 'success', title: 'Sucesso!', text: 'Workspace criado.', background: '#1e293b', color: '#fff', confirmButtonColor: '#0284c7' }).then(() => window.location.reload());
                 } else { throw new Error(data.message); }
             })
             .catch(error => Swal.fire({ icon: 'error', title: 'Ops!', text: error.message, background: '#1e293b', color: '#fff' }))
             .finally(() => { btn.innerHTML = originalText; btn.disabled = false; });
         });
 
-        // --- NOVA FUNÇÃO DE DELETAR ---
+        // Função de Deletar (Soft Delete)
         function deletarWorkspace(event, id, nome) {
-            // Previne que o card seja aberto (clique no link)
             event.stopPropagation();
             event.preventDefault();
 
             Swal.fire({
-                title: 'Excluir Workspace?',
-                text: `Tem certeza que deseja apagar "${nome}"?`,
+                title: 'Desativar Workspace?',
+                text: `"${nome}" ficará inativo e não aparecerá na lista.`,
                 icon: 'warning',
                 background: '#1e293b',
                 color: '#fff',
                 showCancelButton: true,
                 confirmButtonColor: '#ef4444',
                 cancelButtonColor: '#334155',
-                confirmButtonText: 'Sim, excluir',
+                confirmButtonText: 'Sim, desativar',
                 cancelButtonText: 'Cancelar'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    
-                    Swal.fire({
-                        title: 'Apagando...',
-                        text: 'Aguarde um momento.',
-                        allowOutsideClick: false,
-                        didOpen: () => { Swal.showLoading(); },
-                        background: '#1e293b',
-                        color: '#fff'
-                    });
+                    Swal.fire({ title: 'Processando...', didOpen: () => Swal.showLoading(), background: '#1e293b', color: '#fff' });
 
+                    // Importante: Certifique-se de que "api/deletar_ws.php" existe
                     fetch('api/deletar_ws.php', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -346,29 +286,10 @@ if ($httpCode >= 200 && $httpCode < 300 && $response) {
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Excluído!',
-                                text: 'Workspace removido com sucesso.',
-                                background: '#1e293b',
-                                color: '#fff',
-                                confirmButtonColor: '#0284c7'
-                            }).then(() => {
-                                window.location.reload();
-                            });
-                        } else {
-                            throw new Error(data.message || 'Erro ao deletar.');
-                        }
+                            Swal.fire({ icon: 'success', title: 'Feito!', text: 'Workspace desativado.', background: '#1e293b', color: '#fff' }).then(() => window.location.reload());
+                        } else { throw new Error(data.message); }
                     })
-                    .catch(error => {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Erro',
-                            text: error.message,
-                            background: '#1e293b',
-                            color: '#fff'
-                        });
-                    });
+                    .catch(error => Swal.fire({ icon: 'error', title: 'Erro', text: error.message, background: '#1e293b', color: '#fff' }));
                 }
             });
         }
