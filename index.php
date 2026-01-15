@@ -27,8 +27,7 @@ $dataEvento = "";
 $qtdAvisos = 0;
 
 try {
-    // A. Busca o próximo evento no calendário (tabelas novas)
-    // Verifica se as tabelas existem para evitar erro fatal se ainda não rodou o SQL
+    // A. Busca o próximo evento no calendário
     $checkTable = $pdo->query("SHOW TABLES LIKE 'calendario_datas'");
     if($checkTable->rowCount() > 0) {
         $stmtAgenda = $pdo->query("
@@ -171,7 +170,7 @@ try {
                         <i class="fa-solid fa-calendar-check text-3xl"></i>
                     </div>
                     <div class="relative z-10">
-                        <span class="block text-sm font-black text-white uppercase tracking-wider">calendário</span>
+                        <span class="block text-sm font-black text-white uppercase tracking-wider">Calendário</span>
                         <?php if ($dataEvento): ?>
                             <span class="text-[10px] text-rose-400 font-bold mt-1 block truncate max-w-[120px]">
                                 <?php echo htmlspecialchars($dataEvento); ?>
@@ -191,7 +190,7 @@ try {
                     </div>
                     <div class="relative">
                         <span class="block text-sm font-black text-white uppercase tracking-wider">Mural</span>
-                        <span class="text-[10px] text-slate-500 font-bold mt-1 block group-hover:text-purple-400">
+                        <span class="text-[10px] text-slate-500 font-bold mt-1 block group-hover:text-purple-400 transition-colors">
                             <?php echo $qtdAvisos > 0 ? "$qtdAvisos novos avisos" : "Mural atualizado"; ?>
                         </span>
                     </div>
@@ -200,6 +199,16 @@ try {
                         <?php echo $qtdAvisos; ?>
                     </div>
                     <?php endif; ?>
+                </a>
+
+                <a href="quizzes.php" class="app-card group rounded-[2.5rem] p-6 flex flex-col items-center text-center gap-4" style="--hover-color: rgba(6, 182, 212, 0.5)">
+                    <div class="w-16 h-16 bg-cyan-500/10 rounded-2xl flex items-center justify-center text-cyan-500 group-hover:bg-cyan-500 group-hover:text-white transition-all duration-500 shadow-lg shadow-cyan-500/10">
+                        <i class="fa-solid fa-list-check text-3xl"></i>
+                    </div>
+                    <div>
+                        <span class="block text-sm font-black text-white uppercase tracking-wider">Quiz & Testes</span>
+                        <span class="text-[10px] text-slate-500 font-bold mt-1 block group-hover:text-cyan-400 transition-colors">Avaliação Contínua</span>
+                    </div>
                 </a>
 
                 <?php if ($tipoUsuario === 'admin' || $tipoUsuario === 'representante'): ?>
