@@ -1,0 +1,182 @@
+2026-01-20 22:56:54 - Recebido: Array
+(
+    [folderId] => 1Cov3diqepFKcmof0RLFYKF555yw8MWT_
+    [folderName] => Patologia Clínica
+    [requestUser] => Array
+        (
+            [id] => 0
+            [name] => Usuario
+            [email] => sem_email
+        )
+
+)
+
+2026-01-20 22:57:26 - Recebido: Array
+(
+    [folderId] => 1Cov3diqepFKcmof0RLFYKF555yw8MWT_
+    [folderName] => Patologia Clínica
+    [requestUser] => Array
+        (
+            [id] => 0
+            [name] => Usuario
+            [email] => sem_email
+        )
+
+)
+
+2026-01-20 22:58:25 - Recebido: Array
+(
+    [folderId] => 1Cov3diqepFKcmof0RLFYKF555yw8MWT_
+    [folderName] => Patologia Clínica
+    [userData] => Array
+        (
+            [id] => 0
+            [name] => Usuario
+            [email] => 
+        )
+
+)
+
+2026-01-20 23:03:53 - Recebido: Array
+(
+    [folderId] => 1Cov3diqepFKcmof0RLFYKF555yw8MWT_
+    [folderName] => Patologia Clínica
+    [userData] => Array
+        (
+            [id] => 0
+            [name] => Usuario
+            [email] => 
+        )
+
+)
+
+2026-01-20 23:08:34 - Recebido: Array
+(
+    [folderId] => 1Cov3diqepFKcmof0RLFYKF555yw8MWT_
+    [folderName] => Patologia Clínica
+    [userData] => Array
+        (
+            [id] => 0
+            [name] => Usuario
+            [email] => 
+        )
+
+)
+
+2026-01-20 23:11:09 - Recebido: Array
+(
+    [folderId] => 1Cov3diqepFKcmof0RLFYKF555yw8MWT_
+    [folderName] => Patologia Clínica
+    [userData] => Array
+        (
+            [id] => 0
+            [name] => Usuario
+            [email] => 
+        )
+
+)
+
+2026-01-20 23:12:12 - Recebido: Array
+(
+    [folderId] => 1Cov3diqepFKcmof0RLFYKF555yw8MWT_
+    [folderName] => Patologia Clínica
+    [userData] => Array
+        (
+            [id] => 0
+            [name] => Usuario
+            [email] => 
+        )
+
+)
+
+2026-01-20 23:12:18 - Recebido: Array
+(
+    [folderId] => 1Cov3diqepFKcmof0RLFYKF555yw8MWT_
+    [folderName] => Patologia Clínica
+    [userData] => Array
+        (
+            [id] => 0
+            [name] => Usuario
+            [email] => 
+        )
+
+)
+
+2026-01-20 23:14:18 - Recebido: Array
+(
+    [folderId] => 1Cov3diqepFKcmof0RLFYKF555yw8MWT_
+    [folderName] => Patologia Clínica
+    [userData] => Array
+        (
+            [id] => 0
+            [name] => Usuario
+            [email] => 
+        )
+
+)
+
+2026-01-20 23:14:23 - Recebido: Array
+(
+    [folderId] => 1Cov3diqepFKcmof0RLFYKF555yw8MWT_
+    [folderName] => Patologia Clínica
+    [userData] => Array
+        (
+            [id] => 0
+            [name] => Usuario
+            [email] => 
+        )
+
+)
+
+2026-01-20 23:14:42 - Recebido: Array
+(
+    [folderId] => 1Cov3diqepFKcmof0RLFYKF555yw8MWT_
+    [folderName] => Patologia Clínica
+    [userData] => Array
+        (
+            [id] => 0
+            [name] => Usuario
+            [email] => 
+        )
+
+)
+
+2026-01-20 23:14:45 - Recebido: Array
+(
+    [folderId] => 1Cov3diqepFKcmof0RLFYKF555yw8MWT_
+    [folderName] => Patologia Clínica
+    [userData] => Array
+        (
+            [id] => 0
+            [name] => Usuario
+            [email] => 
+        )
+
+)
+
+2026-01-20 23:14:52 - Recebido: Array
+(
+    [folderId] => 1Cov3diqepFKcmof0RLFYKF555yw8MWT_
+    [folderName] => Patologia Clínica
+    [userData] => Array
+        (
+            [id] => 0
+            [name] => Usuario
+            [email] => 
+        )
+
+)
+
+2026-01-20 23:14:58 - Recebido: Array
+(
+    [folderId] => 1Cov3diqepFKcmof0RLFYKF555yw8MWT_
+    [folderName] => Patologia Clínica
+    [userData] => Array
+        (
+            [id] => 0
+            [name] => Usuario
+            [email] => 
+        )
+
+)
+
