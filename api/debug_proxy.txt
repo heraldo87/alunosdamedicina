@@ -180,3 +180,6 @@
 
 )
 
+2026-01-21 02:03:18 - Enviando para n8n: {"action":"listar_arquivos","folderId":"1Cov3diqepFKcmof0RLFYKF555yw8MWT_","request_timestamp":"2026-01-21 02:03:18","user_context":{"id":5,"nome":"Heraldo Alves da Silva","tipo":"aluno"}}
+2026-01-21 02:03:32 - Enviando para n8n: {"action":"listar_arquivos","folderId":"1Cov3diqepFKcmof0RLFYKF555yw8MWT_","request_timestamp":"2026-01-21 02:03:32","user_context":{"id":5,"nome":"Heraldo Alves da Silva","tipo":"aluno"}}
+2026-01-21 02:03:41 - Enviando para n8n: {"action":"listar_arquivos","folderId":"1Cov3diqepFKcmof0RLFYKF555yw8MWT_","request_timestamp":"2026-01-21 02:03:41","user_context":{"id":5,"nome":"Heraldo Alves da Silva","tipo":"aluno"}}
