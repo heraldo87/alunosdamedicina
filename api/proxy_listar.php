@@ -11,7 +11,7 @@ header('Content-Type: application/json');
 
 // --- CONFIGURAÇÃO ---
 // URL do Webhook do n8n
-$n8nUrl = "https://n8n.alunosdamedicina.com/webhook-test/b29383c3-e32f-42a4-b1f6-19706ecd6f6c"; 
+$n8nUrl = "https://n8n.alunosdamedicina.com/webhook/b29383c3-e32f-42a4-b1f6-19706ecd6f6c"; 
 
 // 2. VERIFICAÇÃO DE SEGURANÇA (Baseado no login.php)
 if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {

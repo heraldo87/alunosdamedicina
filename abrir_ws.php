@@ -107,7 +107,7 @@ $appConfig = [
                     <i class="fa-solid fa-folder-open text-slate-600 text-2xl"></i>
                 </div>
                 <h3 class="text-lg font-bold text-slate-400">Pasta Vazia</h3>
-                <p class="text-slate-500 text-sm mt-1">Nenhum arquivo encontrado.</p>
+                <p class="text-slate-500 text-sm mt-1">Nenhum arquivo encontrado nesta workspace.</p>
             </div>
         </div>
     </main>
@@ -144,277 +144,264 @@ $appConfig = [
         </div>
     </div>
     <script>
-        /**
-         * MEDINFOCUS - Gerenciador de Arquivos do Workspace
-         * Refatorado para trabalhar com Proxy Seguro e Sessões PHP
-         */
+            /**
+             * MEDINFOCUS - Gerenciador de Arquivos do Workspace
+             * Versão com Filtro Anti-Ghosts (Remove arquivos vazios/inválidos)
+             */
 
-        // --- 1. CONFIGURAÇÃO (PHP -> JS) ---
-        const APP_CONFIG = <?php echo json_encode($appConfig); ?>;
+            // --- 1. CONFIGURAÇÃO (PHP -> JS) ---
+            const APP_CONFIG = <?php echo json_encode($appConfig); ?>;
 
-        // DEBUG: Verifica se a configuração chegou corretamente
-        console.group("MEDINFOCUS DEBUG");
-        console.log("Configuração Carregada:", APP_CONFIG);
-        console.groupEnd();
+            let selectedFile = null;
 
-        let selectedFile = null;
+            document.addEventListener('DOMContentLoaded', () => {
+                fetchFiles();
+            });
 
-        document.addEventListener('DOMContentLoaded', () => {
-            fetchFiles();
-        });
+            // --- 2. LISTAGEM DE ARQUIVOS (ATUALIZADA) ---
+            async function fetchFiles() {
+                const container = document.getElementById('fileListContainer');
+                const emptyState = document.getElementById('emptyState');
+                
+                if (!APP_CONFIG.folderId) return;
 
-        // --- 2. LISTAGEM DE ARQUIVOS (FETCH VIA PROXY) ---
-        async function fetchFiles() {
-            const container = document.getElementById('fileListContainer');
-            const emptyState = document.getElementById('emptyState');
-            
-            // Validação Inicial
-            if (!APP_CONFIG.folderId) {
-                console.error("ERRO CRÍTICO: Folder ID não definido.");
-                Toastify({ text: "Erro interno: ID da pasta ausente.", style: { background: "#f43f5e" } }).showToast();
-                return;
+                // Skeleton Loading
+                container.innerHTML = `
+                    ${Array(3).fill(0).map(() => `
+                        <div class="flex items-center justify-between p-4 bg-slate-800/30 border border-slate-800 rounded-xl animate-pulse">
+                            <div class="flex items-center gap-4 w-1/2">
+                                <div class="w-10 h-10 bg-slate-700 rounded-lg"></div>
+                                <div class="h-4 bg-slate-700 rounded w-3/4"></div>
+                            </div>
+                            <div class="hidden md:block w-1/4 h-4 bg-slate-700 rounded"></div>
+                            <div class="w-1/4 flex justify-end gap-2"><div class="w-8 h-8 bg-slate-700 rounded-lg"></div></div>
+                        </div>`).join('')}
+                `;
+                emptyState.classList.add('hidden');
+
+                try {
+                    const payload = {
+                        folderId: APP_CONFIG.folderId,      
+                        folderName: APP_CONFIG.folderName
+                    };
+
+                    const response = await fetch('api/proxy_listar.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) throw new Error(`Erro HTTP: ${response.status}`);
+                    
+                    let files = await response.json();
+                    
+                    // Normaliza para array
+                    if (!Array.isArray(files)) {
+                        files = (files && Object.keys(files).length > 0) ? [files] : [];
+                    }
+
+                    // --- FILTRO DE SEGURANÇA (NOVO) ---
+                    // Remove itens que não tenham ID ou Nome (evita o "Arquivo Sem Nome")
+                    files = files.filter(f => f && (f.id || f.file_id) && (f.nome_arquivo || f.name));
+
+                    container.innerHTML = '';
+
+                    // Agora verifica se a lista FILTRADA está vazia
+                    if (files.length === 0) {
+                        emptyState.classList.remove('hidden');
+                        return;
+                    }
+
+                    files.forEach(file => {
+                        const fileName = file.nome_arquivo || file.name || 'Arquivo Sem Nome';
+                        const fileMime = file.tipo_mime || file.mimeType || 'application/octet-stream';
+                        const dbId = file.id; 
+                        
+                        const localDownloadLink = `api/download_arquivo_ws.php?file_id=${dbId}&name=${encodeURIComponent(fileName)}`;
+                        const iconClass = getIconForMimeType(fileMime);
+
+                        const fileRow = document.createElement('div');
+                        fileRow.className = "group flex items-center justify-between p-4 bg-brand-surface border border-slate-800 rounded-xl hover:border-brand-primary/50 hover:bg-slate-800 transition-all mb-3";
+                        
+                        fileRow.innerHTML = `
+                            <div class="flex items-center gap-4 w-1/2 overflow-hidden">
+                                <div class="w-10 h-10 flex-shrink-0 bg-slate-900 rounded-lg flex items-center justify-center text-slate-400 group-hover:text-brand-primary transition-colors">
+                                    <i class="${iconClass} text-xl"></i>
+                                </div>
+                                <div class="min-w-0">
+                                    <h4 class="text-sm font-semibold text-slate-200 truncate group-hover:text-white" title="${fileName}">${fileName}</h4>
+                                    <div class="flex items-center gap-2 mt-1">
+                                        <span class="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700">ID: ${dbId}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="hidden md:block w-1/4 text-xs text-slate-500 truncate">
+                                ${formatMimeType(fileMime)}
+                            </div>
+
+                            <div class="w-1/4 flex justify-end items-center gap-2">
+                                <a href="${localDownloadLink}" 
+                                   target="_blank"
+                                   class="p-2 text-slate-400 hover:text-emerald-400 hover:bg-emerald-400/10 rounded-lg transition-colors" title="Baixar">
+                                    <i class="fa-solid fa-download"></i>
+                                </a>
+                                
+                                <button onclick="deleteFile('${dbId}', '${fileName}')" class="p-2 text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors" title="Deletar">
+                                    <i class="fa-regular fa-trash-can"></i>
+                                </button>
+                            </div>
+                        `;
+                        container.appendChild(fileRow);
+                    });
+
+                } catch (error) {
+                    console.error("Erro no Fetch:", error);
+                    container.innerHTML = '';
+                    emptyState.classList.remove('hidden');
+                    Toastify({ text: "Erro ao carregar arquivos.", style: { background: "#f43f5e" } }).showToast();
+                }
             }
 
-            // Skeleton Loading (UX: Feedback visual imediato)
-            container.innerHTML = `
-                ${Array(3).fill(0).map(() => `
-                    <div class="flex items-center justify-between p-4 bg-slate-800/30 border border-slate-800 rounded-xl animate-pulse">
-                        <div class="flex items-center gap-4 w-1/2">
-                            <div class="w-10 h-10 bg-slate-700 rounded-lg"></div>
-                            <div class="h-4 bg-slate-700 rounded w-3/4"></div>
-                        </div>
-                        <div class="hidden md:block w-1/4 h-4 bg-slate-700 rounded"></div>
-                        <div class="w-1/4 flex justify-end gap-2"><div class="w-8 h-8 bg-slate-700 rounded-lg"></div></div>
-                    </div>`).join('')}
-            `;
-            emptyState.classList.add('hidden');
-
-            try {
-                // PAYLOAD OTIMIZADO:
-                // Não enviamos mais 'userData' aqui. O Proxy pega da $_SESSION do PHP.
-                const payload = {
-                    folderId: APP_CONFIG.folderId,      
-                    folderName: APP_CONFIG.folderName
-                };
-
-                const response = await fetch('api/proxy_listar.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!response.ok) {
-                    const errData = await response.json();
-                    throw new Error(errData.error || `Erro HTTP: ${response.status}`);
-                }
-                
-                let files = await response.json();
-                
-                // Tratamento caso o n8n retorne objeto único em vez de array
-                if (!Array.isArray(files)) {
-                    files = files ? [files] : [];
-                }
-
-                // Limpa o Skeleton
-                container.innerHTML = '';
-
-                // Verifica se está vazio
-                if (files.length === 0) {
-                    emptyState.classList.remove('hidden');
+            // --- 3. FUNÇÃO DELETAR ---
+            async function deleteFile(id, name) { 
+                if(!confirm(`Tem certeza que deseja deletar permanentemente o arquivo: "${name}"?`)) {
                     return;
                 }
 
-                // Renderiza a Lista
-                files.forEach(file => {
-                    // Mapeamento de campos do JSON do n8n (Ajuste conforme seu retorno real)
-                    const fileName = file.nome_arquivo || file.name || 'Arquivo Sem Nome';
-                    const fileMime = file.tipo_mime || file.mimeType || 'application/octet-stream';
-                    const dbId = file.id; 
-                    
-                    // Tenta pegar o link de download se o n8n mandar, senão fica '#'
-                    // Espera campos como 'web_content_link', 'url_download', etc.
-                    const downloadLink = file.web_content_link || file.url_download || '#';
-                    const isLinkActive = downloadLink !== '#';
+                Toastify({ text: "Processando exclusão...", duration: 2000, style: { background: "#3b82f6" } }).showToast();
 
-                    const iconClass = getIconForMimeType(fileMime);
+                try {
+                    const response = await fetch('api/deleta_arquivo_ws.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            file_id: id,
+                            drive_id: APP_CONFIG.folderId 
+                        })
+                    });
 
-                    const fileRow = document.createElement('div');
-                    fileRow.className = "group flex items-center justify-between p-4 bg-brand-surface border border-slate-800 rounded-xl hover:border-brand-primary/50 hover:bg-slate-800 transition-all mb-3";
-                    
-                    fileRow.innerHTML = `
-                        <div class="flex items-center gap-4 w-1/2 overflow-hidden">
-                            <div class="w-10 h-10 flex-shrink-0 bg-slate-900 rounded-lg flex items-center justify-center text-slate-400 group-hover:text-brand-primary transition-colors">
-                                <i class="${iconClass} text-xl"></i>
-                            </div>
-                            <div class="min-w-0">
-                                <h4 class="text-sm font-semibold text-slate-200 truncate group-hover:text-white" title="${fileName}">${fileName}</h4>
-                                <div class="flex items-center gap-2 mt-1">
-                                    <span class="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700">ID: ${dbId}</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="hidden md:block w-1/4 text-xs text-slate-500 truncate">
-                            ${formatMimeType(fileMime)}
-                        </div>
+                    const result = await response.json();
 
-                        <div class="w-1/4 flex justify-end items-center gap-2">
-                            <a href="${downloadLink}" 
-                            ${isLinkActive ? 'target="_blank"' : 'onclick="Toastify({ text: \'Link indisponível no momento.\', style: { background: \'#f59e0b\' } }).showToast(); return false;"'} 
-                            class="p-2 text-slate-400 hover:text-emerald-400 hover:bg-emerald-400/10 rounded-lg transition-colors" title="Baixar / Visualizar">
-                                <i class="fa-solid fa-download"></i>
-                            </a>
-                            
-                            <button onclick="deleteFile('${dbId}')" class="p-2 text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors" title="Deletar">
-                                <i class="fa-regular fa-trash-can"></i>
-                            </button>
-                        </div>
-                    `;
-                    container.appendChild(fileRow);
-                });
-
-            } catch (error) {
-                console.error("Erro no Fetch:", error);
-                container.innerHTML = '';
-                emptyState.classList.remove('hidden');
-                emptyState.querySelector('h3').textContent = 'Erro de Conexão';
-                emptyState.querySelector('p').textContent = 'Não foi possível carregar os arquivos. Tente recarregar.';
-                
-                Toastify({ 
-                    text: "Erro ao carregar arquivos.", 
-                    duration: 3000,
-                    style: { background: "#f43f5e" } 
-                }).showToast();
-            }
-        }
-
-        // --- 3. UPLOAD DE ARQUIVOS ---
-        function uploadFile() {
-            if (!selectedFile) return;
-
-            const formData = new FormData();
-            formData.append('arquivo', selectedFile);
-            formData.append('drive_id', APP_CONFIG.folderId); 
-            formData.append('folder_name', APP_CONFIG.folderName);
-
-            // UI Feedback: Botão em estado de carregamento
-            const btn = document.getElementById('btnEnviar');
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Enviando...';
-            btn.disabled = true;
-
-            const xhr = new XMLHttpRequest();
-            xhr.open('POST', 'api/upload_arquivo_ws.php', true);
-            
-            // Barra de Progresso
-            xhr.upload.onprogress = (e) => {
-                if (e.lengthComputable) {
-                    const pct = Math.round((e.loaded / e.total) * 100);
-                    document.getElementById('progressBar').style.width = pct + '%';
-                    document.getElementById('progressText').textContent = pct + '%';
-                }
-            };
-
-            xhr.onload = () => {
-                // Restaura Botão
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-
-                if (xhr.status === 200) {
-                    try {
-                        const resp = JSON.parse(xhr.responseText);
-                        if(resp.success) {
-                            Toastify({ text: "Arquivo enviado com sucesso!", style: { background: "#10b981" } }).showToast();
-                            toggleModal('uploadModal');
-                            // Atualiza a lista automaticamente
-                            fetchFiles();
-                        } else {
-                            throw new Error(resp.message || "Erro desconhecido");
-                        }
-                    } catch (e) {
-                        Toastify({ text: "Erro: " + e.message, style: { background: "#f43f5e" } }).showToast();
+                    if (result.success || response.ok) { 
+                        Toastify({ text: "Arquivo deletado com sucesso!", style: { background: "#10b981" } }).showToast();
+                        fetchFiles(); // Recarrega a lista
+                    } else {
+                        throw new Error(result.error || "Erro ao deletar.");
                     }
-                } else {
-                    Toastify({ text: "Erro de servidor ao enviar.", style: { background: "#f43f5e" } }).showToast();
+
+                } catch (error) {
+                    console.error("Erro delete:", error);
+                    Toastify({ text: "Erro: " + error.message, style: { background: "#f43f5e" } }).showToast();
                 }
-            };
-
-            xhr.onerror = () => {
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-                Toastify({ text: "Falha na conexão.", style: { background: "#f43f5e" } }).showToast();
-            };
-
-            xhr.send(formData);
-        }
-
-        // --- 4. UTILITÁRIOS & UI ---
-        function deleteFile(id) { 
-            // Aqui futuramente chamaremos o endpoint de deletar
-            if(confirm('Tem certeza que deseja deletar este arquivo?')) {
-                Toastify({ text: "Funcionalidade de exclusão em breve.", style: { background: "#3b82f6" } }).showToast(); 
             }
-        }
 
-        function getIconForMimeType(mime) {
-            if (!mime) return 'fa-solid fa-file';
-            if (mime.includes('pdf')) return 'fa-solid fa-file-pdf';
-            if (mime.includes('image')) return 'fa-solid fa-file-image';
-            if (mime.includes('word') || mime.includes('document')) return 'fa-solid fa-file-word';
-            if (mime.includes('sheet') || mime.includes('excel')) return 'fa-solid fa-file-excel';
-            if (mime.includes('zip') || mime.includes('compressed')) return 'fa-solid fa-file-zipper';
-            return 'fa-solid fa-file';
-        }
+            // --- 4. UPLOAD ---
+            function uploadFile() {
+                if (!selectedFile) return;
 
-        function formatMimeType(mime) { 
-            return mime ? mime.split('/').pop().toUpperCase().slice(0, 10) : 'ARQUIVO'; 
-        }
+                const formData = new FormData();
+                formData.append('arquivo', selectedFile);
+                formData.append('drive_id', APP_CONFIG.folderId); 
+                formData.append('folder_name', APP_CONFIG.folderName);
 
-        // UI: Controle do Modal e Drag & Drop
-        function toggleModal(id) {
-            const el = document.getElementById(id);
-            el.classList.toggle('hidden');
-            if(el.classList.contains('hidden')) clearFile();
-        }
+                const btn = document.getElementById('btnEnviar');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Enviando...';
+                btn.disabled = true;
 
-        const dropZone = document.getElementById('dropZone');
-        const fileInput = document.getElementById('fileInput');
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', 'api/upload_arquivo_ws.php', true);
+                
+                xhr.upload.onprogress = (e) => {
+                    if (e.lengthComputable) {
+                        const pct = Math.round((e.loaded / e.total) * 100);
+                        document.getElementById('progressBar').style.width = pct + '%';
+                        document.getElementById('progressText').textContent = pct + '%';
+                    }
+                };
 
-        dropZone.addEventListener('click', () => fileInput.click());
-        fileInput.addEventListener('change', () => handleFile(fileInput.files[0]));
-        
-        // Efeitos visuais Drag & Drop
-        dropZone.addEventListener('dragover', (e) => { 
-            e.preventDefault(); 
-            dropZone.classList.add('border-brand-primary', 'bg-slate-800/50'); 
-        });
-        dropZone.addEventListener('dragleave', () => { 
-            dropZone.classList.remove('border-brand-primary', 'bg-slate-800/50'); 
-        });
-        dropZone.addEventListener('drop', (e) => { 
-            e.preventDefault(); 
-            dropZone.classList.remove('border-brand-primary', 'bg-slate-800/50');
-            if(e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]); 
-        });
+                xhr.onload = () => {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                    if (xhr.status === 200) {
+                        try {
+                            const resp = JSON.parse(xhr.responseText);
+                            if(resp.success) {
+                                Toastify({ text: "Arquivo enviado!", style: { background: "#10b981" } }).showToast();
+                                toggleModal('uploadModal');
+                                fetchFiles();
+                            } else {
+                                throw new Error(resp.message || "Erro desconhecido");
+                            }
+                        } catch (e) {
+                            Toastify({ text: "Erro: " + e.message, style: { background: "#f43f5e" } }).showToast();
+                        }
+                    } else {
+                        Toastify({ text: "Erro de servidor.", style: { background: "#f43f5e" } }).showToast();
+                    }
+                };
+                xhr.onerror = () => {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                    Toastify({ text: "Falha na conexão.", style: { background: "#f43f5e" } }).showToast();
+                };
+                xhr.send(formData);
+            }
 
-        function handleFile(file) {
-            if(!file) return;
-            selectedFile = file;
-            document.getElementById('fileName').textContent = file.name;
-            document.getElementById('dropZone').classList.add('hidden');
-            document.getElementById('filePreview').classList.remove('hidden');
-            document.getElementById('btnEnviar').disabled = false;
-        }
+            // --- UTILS ---
+            function getIconForMimeType(mime) {
+                if (!mime) return 'fa-solid fa-file';
+                if (mime.includes('pdf')) return 'fa-solid fa-file-pdf';
+                if (mime.includes('image')) return 'fa-solid fa-file-image';
+                if (mime.includes('word') || mime.includes('document')) return 'fa-solid fa-file-word';
+                if (mime.includes('sheet') || mime.includes('excel')) return 'fa-solid fa-file-excel';
+                if (mime.includes('zip') || mime.includes('compressed')) return 'fa-solid fa-file-zipper';
+                return 'fa-solid fa-file';
+            }
 
-        function clearFile() {
-            selectedFile = null;
-            fileInput.value = '';
-            document.getElementById('dropZone').classList.remove('hidden');
-            document.getElementById('filePreview').classList.add('hidden');
-            document.getElementById('btnEnviar').disabled = true;
-            document.getElementById('progressBar').style.width = '0%';
-            document.getElementById('progressText').textContent = '0%';
-        }
-    </script>
+            function formatMimeType(mime) { 
+                return mime ? mime.split('/').pop().toUpperCase().slice(0, 10) : 'ARQUIVO'; 
+            }
+
+            function toggleModal(id) {
+                const el = document.getElementById(id);
+                el.classList.toggle('hidden');
+                if(el.classList.contains('hidden')) clearFile();
+            }
+
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('fileInput');
+
+            dropZone.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', () => handleFile(fileInput.files[0]));
+            
+            dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('border-brand-primary', 'bg-slate-800/50'); });
+            dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('border-brand-primary', 'bg-slate-800/50'); });
+            dropZone.addEventListener('drop', (e) => { 
+                e.preventDefault(); 
+                dropZone.classList.remove('border-brand-primary', 'bg-slate-800/50');
+                if(e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]); 
+            });
+
+            function handleFile(file) {
+                if(!file) return;
+                selectedFile = file;
+                document.getElementById('fileName').textContent = file.name;
+                document.getElementById('dropZone').classList.add('hidden');
+                document.getElementById('filePreview').classList.remove('hidden');
+                document.getElementById('btnEnviar').disabled = false;
+            }
+
+            function clearFile() {
+                selectedFile = null;
+                fileInput.value = '';
+                document.getElementById('dropZone').classList.remove('hidden');
+                document.getElementById('filePreview').classList.add('hidden');
+                document.getElementById('btnEnviar').disabled = true;
+                document.getElementById('progressBar').style.width = '0%';
+                document.getElementById('progressText').textContent = '0%';
+            }
+        </script>
 </body>
 </html>
